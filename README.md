@@ -1,36 +1,195 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Expense Tracker
+
+A modern, professional expense tracking web application built with Next.js 14, TypeScript, and Tailwind CSS.
+
+## Features
+
+- **Dashboard**: Visual overview of your spending with summary cards and charts
+  - Total spending and expense count
+  - Current month spending
+  - Average expense amount
+  - Top spending category
+  - Interactive pie chart showing spending by category
+  - Category breakdown with progress bars
+
+- **Expense Management**:
+  - Add new expenses with date, amount, category, and description
+  - Edit existing expenses
+  - Delete expenses with confirmation
+  - Form validation for all inputs
+
+- **Advanced Filtering**:
+  - Search expenses by description, category, or amount
+  - Filter by date range (start and end date)
+  - Filter by category
+  - Clear all filters with one click
+
+- **Data Export**:
+  - Export expenses to CSV format
+  - Includes all expense details
+
+- **Categories**:
+  - Food
+  - Transportation
+  - Entertainment
+  - Shopping
+  - Bills
+  - Other
+
+## Tech Stack
+
+- **Framework**: Next.js 14 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts
+- **Date Handling**: date-fns
+- **Storage**: localStorage (client-side)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ installed on your machine
+- npm or yarn package manager
+
+### Installation
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### Build for Production
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Usage Guide
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Adding an Expense
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Click the "Add" tab in the navigation
+2. Fill in the expense details:
+   - **Date**: Select the date of the expense (defaults to today)
+   - **Amount**: Enter the amount in USD
+   - **Category**: Choose from available categories
+   - **Description**: Add a brief description
+3. Click "Add Expense"
 
-## Learn More
+### Viewing Expenses
 
-To learn more about Next.js, take a look at the following resources:
+1. Click the "Expenses" tab to view all expenses
+2. Use the filter options to:
+   - Search by keyword
+   - Filter by category
+   - Set a date range
+3. Click the edit icon to modify an expense
+4. Click the delete icon and confirm to remove an expense
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Dashboard Analytics
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Click the "Dashboard" tab to view:
+   - Summary cards with key metrics
+   - Pie chart showing spending distribution
+   - Category breakdown with percentages
 
-## Deploy on Vercel
+### Exporting Data
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Click the "Export CSV" button in the header (desktop) or the floating button (mobile)
+2. Your expenses will be downloaded as a CSV file
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Features in Detail
+
+### Form Validation
+
+- Amount must be a positive number with up to 2 decimal places
+- Date cannot be in the future
+- Description is required
+- All fields show inline error messages
+
+### Responsive Design
+
+- Mobile-first approach
+- Adaptive navigation (icons only on mobile, full labels on desktop)
+- Touch-friendly buttons and inputs
+- Floating action button for mobile export
+
+### Data Persistence
+
+- All data is stored in browser localStorage
+- Data persists across browser sessions
+- No server or database required
+
+### User Experience
+
+- Loading states for data fetching
+- Smooth transitions and hover effects
+- Visual feedback for user actions
+- Delete confirmation to prevent accidents
+- Empty states with helpful messages
+
+## Project Structure
+
+```
+expense-tracker-ai/
+├── app/
+│   ├── layout.tsx          # Root layout with metadata
+│   ├── page.tsx             # Main page with tab navigation
+│   └── globals.css          # Global styles
+├── components/
+│   ├── Dashboard.tsx        # Dashboard with charts and analytics
+│   ├── ExpenseForm.tsx      # Form for adding/editing expenses
+│   └── ExpenseList.tsx      # List view with filters
+├── hooks/
+│   └── useExpenses.ts       # Custom hook for expense management
+├── lib/
+│   ├── constants.ts         # App constants and configurations
+│   └── utils.ts             # Utility functions
+└── types/
+    └── expense.ts           # TypeScript type definitions
+```
+
+## Browser Support
+
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+
+## Development
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm start` - Start production server
+- `npm run lint` - Run ESLint
+
+### TypeScript
+
+The project uses strict TypeScript configuration for type safety. All components, hooks, and utilities are fully typed.
+
+## Future Enhancements
+
+Potential features for future versions:
+- Recurring expenses
+- Budget limits and alerts
+- Multiple currency support
+- Dark mode
+- Cloud sync with backend
+- Mobile app version
+- Receipt photo uploads
+- Advanced analytics and reports
+
+## License
+
+This project is open source and available under the MIT License.

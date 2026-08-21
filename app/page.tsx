@@ -1,69 +1,224 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { useExpenses } from '@/hooks/useExpenses';
+import { Expense, ExpenseFormData } from '@/types/expense';
+import ExpenseForm from '@/components/ExpenseForm';
+import ExpenseList from '@/components/ExpenseList';
+import Dashboard from '@/components/Dashboard';
+import { exportToCSV } from '@/lib/utils';
+
+type Tab = 'dashboard' | 'expenses' | 'add';
 
 export default function Home() {
+  const { expenses, isLoading, addExpense, updateExpense, deleteExpense } = useExpenses();
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  const handleAddExpense = (formData: ExpenseFormData) => {
+    addExpense(formData);
+    setActiveTab('expenses');
+  };
+
+  const handleUpdateExpense = (formData: ExpenseFormData) => {
+    if (editingExpense) {
+      updateExpense(editingExpense.id, formData);
+      setEditingExpense(null);
+      setActiveTab('expenses');
+    }
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setActiveTab('add');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingExpense(null);
+    setActiveTab('expenses');
+  };
+
+  const handleExport = () => {
+    exportToCSV(expenses);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading expenses...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white text-xl font-bold">
+                💸
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900">Expense Tracker</h1>
+            </div>
+            {expenses.length > 0 && (
+              <button
+                onClick={handleExport}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Export CSV
+              </button>
+            )}
+          </div>
+
+          {/* Navigation Tabs */}
+          <nav className="flex gap-1 -mb-px">
+            <TabButton
+              active={activeTab === 'dashboard'}
+              onClick={() => setActiveTab('dashboard')}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+              }
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              Dashboard
+            </TabButton>
+            <TabButton
+              active={activeTab === 'expenses'}
+              onClick={() => {
+                setActiveTab('expenses');
+                setEditingExpense(null);
+              }}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                  />
+                </svg>
+              }
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              Expenses
+            </TabButton>
+            <TabButton
+              active={activeTab === 'add'}
+              onClick={() => {
+                setActiveTab('add');
+                setEditingExpense(null);
+              }}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              }
+            >
+              {editingExpense ? 'Edit' : 'Add'}
+            </TabButton>
+          </nav>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'dashboard' && <Dashboard expenses={expenses} />}
+
+        {activeTab === 'expenses' && (
+          <ExpenseList
+            expenses={expenses}
+            onEdit={handleEditExpense}
+            onDelete={deleteExpense}
+          />
+        )}
+
+        {activeTab === 'add' && (
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                {editingExpense ? 'Edit Expense' : 'Add New Expense'}
+              </h2>
+              <ExpenseForm
+                onSubmit={editingExpense ? handleUpdateExpense : handleAddExpense}
+                onCancel={editingExpense ? handleCancelEdit : undefined}
+                initialData={editingExpense || undefined}
+                submitLabel={editingExpense ? 'Update Expense' : 'Add Expense'}
+              />
+            </div>
+          </div>
+        )}
       </main>
+
+      {/* Mobile Export Button */}
+      {expenses.length > 0 && (
+        <div className="sm:hidden fixed bottom-6 right-6">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition-colors font-medium"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            Export
+          </button>
+        </div>
+      )}
     </div>
+  );
+}
+
+interface TabButtonProps {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  icon: React.ReactNode;
+}
+
+function TabButton({ active, onClick, children, icon }: TabButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+        active
+          ? 'border-blue-600 text-blue-600'
+          : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+      }`}
+    >
+      {icon}
+      <span className="hidden sm:inline">{children}</span>
+    </button>
   );
 }
