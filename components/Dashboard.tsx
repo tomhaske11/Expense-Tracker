@@ -6,6 +6,7 @@ import {
   formatCurrency,
   getCurrentMonthExpenses,
   calculateCategoryBreakdown,
+  exportToCSV,
 } from '@/lib/utils';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/lib/constants';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
@@ -38,6 +39,10 @@ export default function Dashboard({ expenses }: DashboardProps) {
 
   const topCategory = summary.categoryBreakdown[0];
   const averageExpense = summary.expenseCount > 0 ? summary.totalSpending / summary.expenseCount : 0;
+
+  const handleExport = () => {
+    exportToCSV(expenses);
+  };
 
   return (
     <div className="space-y-6">
@@ -72,6 +77,18 @@ export default function Dashboard({ expenses }: DashboardProps) {
           subtitle={topCategory ? formatCurrency(topCategory.amount) : 'No data'}
         />
       </div>
+
+      {/* Export Button */}
+      {expenses.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleExport}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Export Data
+          </button>
+        </div>
+      )}
 
       {/* Charts */}
       {summary.categoryBreakdown.length > 0 && (
