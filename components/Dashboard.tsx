@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Expense } from '@/types/expense';
 import {
   formatCurrency,
@@ -9,12 +9,14 @@ import {
 } from '@/lib/utils';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/lib/constants';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import ExportModal from '@/components/ExportModal';
 
 interface DashboardProps {
   expenses: Expense[];
 }
 
 export default function Dashboard({ expenses }: DashboardProps) {
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const summary = useMemo(() => {
     const totalSpending = expenses.reduce((sum, expense) => sum + expense.amount, 0);
     const monthlyExpenses = getCurrentMonthExpenses(expenses);
@@ -40,9 +42,43 @@ export default function Dashboard({ expenses }: DashboardProps) {
   const averageExpense = summary.expenseCount > 0 ? summary.totalSpending / summary.expenseCount : 0;
 
   return (
-    <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <>
+      <div className="space-y-6">
+        {/* Export Button - Prominent placement */}
+        {expenses.length > 0 && (
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between text-white">
+              <div>
+                <h3 className="text-lg font-semibold mb-1">Export Your Data</h3>
+                <p className="text-blue-100 text-sm">
+                  Download your expenses in CSV, JSON, or PDF format with advanced filtering options
+                </p>
+              </div>
+              <button
+                onClick={() => setIsExportModalOpen(true)}
+                className="px-6 py-3 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-all font-semibold shadow-md hover:shadow-lg flex items-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Export Data
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
           title="Total Spending"
           value={formatCurrency(summary.totalSpending)}
@@ -139,12 +175,20 @@ export default function Dashboard({ expenses }: DashboardProps) {
         </div>
       )}
 
-      {summary.categoryBreakdown.length === 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-          <p className="text-gray-500">No expenses to display. Add some expenses to see your spending breakdown!</p>
-        </div>
-      )}
-    </div>
+        {summary.categoryBreakdown.length === 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+            <p className="text-gray-500">No expenses to display. Add some expenses to see your spending breakdown!</p>
+          </div>
+        )}
+      </div>
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        expenses={expenses}
+      />
+    </>
   );
 }
 
