@@ -8,13 +8,15 @@ import ExpenseList from '@/components/ExpenseList';
 import Dashboard from '@/components/Dashboard';
 import { exportToCSV } from '@/lib/utils';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
-type Tab = 'dashboard' | 'expenses' | 'add';
+type Tab = 'dashboard' | 'expenses' | 'add' | 'vendors';
 
 export default function Home() {
   const { expenses, isLoading, addExpense, updateExpense, deleteExpense } = useExpenses();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const router = useRouter();
 
   const handleAddExpense = (formData: ExpenseFormData) => {
     addExpense(formData);
@@ -157,6 +159,22 @@ export default function Home() {
               }
             >
               {editingExpense ? 'Edit' : 'Add'}
+            </TabButton>
+            <TabButton
+              active={activeTab === 'vendors'}
+              onClick={() => router.push('/top-vendors')}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
+                </svg>
+              }
+            >
+              Vendors
             </TabButton>
           </nav>
         </div>

@@ -1,5 +1,5 @@
-import { Expense, ExpenseCategory } from '@/types/expense';
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { Expense, ExpenseCategory, VendorStats, DateRangeFilter } from '@/types/expense';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, subDays, startOfYear } from 'date-fns';
 
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -123,4 +123,101 @@ export function exportToCSV(expenses: Expense[]): void {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+export function filterExpensesByDateRange(
+  expenses: Expense[],
+  dateRange: DateRangeFilter
+): Expense[] {
+  const now = new Date();
+
+  switch (dateRange) {
+    case 'last7days': {
+      const startDate = subDays(now, 7);
+      return expenses.filter((expense) => {
+        const expenseDate = parseISO(expense.date);
+        return expenseDate >= startDate;
+      });
+    }
+    case 'last30days': {
+      const startDate = subDays(now, 30);
+      return expenses.filter((expense) => {
+        const expenseDate = parseISO(expense.date);
+        return expenseDate >= startDate;
+      });
+    }
+    case 'thisMonth': {
+      const start = startOfMonth(now);
+      const end = endOfMonth(now);
+      return expenses.filter((expense) => {
+        const expenseDate = parseISO(expense.date);
+        return isWithinInterval(expenseDate, { start, end });
+      });
+    }
+    case 'thisYear': {
+      const startDate = startOfYear(now);
+      return expenses.filter((expense) => {
+        const expenseDate = parseISO(expense.date);
+        return expenseDate >= startDate;
+      });
+    }
+    case 'allTime':
+    default:
+      return expenses;
+  }
+}
+
+export function calculateVendorStats(expenses: Expense[]): VendorStats[] {
+  if (expenses.length === 0) return [];
+
+  const totalSpending = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+  // Group expenses by vendor (using description as vendor name)
+  const vendorMap = new Map<string, Expense[]>();
+
+  expenses.forEach((expense) => {
+    const vendor = expense.description.trim() || 'Unknown';
+    if (!vendorMap.has(vendor)) {
+      vendorMap.set(vendor, []);
+    }
+    vendorMap.get(vendor)!.push(expense);
+  });
+
+  // Calculate stats for each vendor
+  const vendorStats: VendorStats[] = [];
+
+  vendorMap.forEach((vendorExpenses, vendor) => {
+    const totalAmount = vendorExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const transactionCount = vendorExpenses.length;
+    const averageAmount = totalAmount / transactionCount;
+
+    // Calculate category breakdown
+    const categoryBreakdown: Record<string, number> = {};
+    vendorExpenses.forEach((expense) => {
+      categoryBreakdown[expense.category] = (categoryBreakdown[expense.category] || 0) + expense.amount;
+    });
+
+    // Find top category
+    let topCategory: ExpenseCategory = vendorExpenses[0].category;
+    let maxAmount = 0;
+    Object.entries(categoryBreakdown).forEach(([category, amount]) => {
+      if (amount > maxAmount) {
+        maxAmount = amount;
+        topCategory = category as ExpenseCategory;
+      }
+    });
+
+    vendorStats.push({
+      vendor,
+      totalAmount,
+      percentage: totalSpending > 0 ? (totalAmount / totalSpending) * 100 : 0,
+      transactionCount,
+      averageAmount,
+      topCategory,
+      categoryBreakdown: categoryBreakdown as Record<ExpenseCategory, number>,
+    });
+  });
+
+  // Sort by total amount descending
+  return vendorStats.sort((a, b) => b.totalAmount - a.totalAmount);
 }
