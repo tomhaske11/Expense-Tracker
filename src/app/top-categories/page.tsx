@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useExpenses } from '@/hooks/useExpenses';
-import { Expense, ExpenseCategory } from '@/types/expense';
+import { useExpenses } from '@/features/expenses/hooks/useExpenses';
+import { ExpenseCategory } from '@/features/expenses/types';
 import { formatCurrency } from '@/lib/utils';
-import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/lib/constants';
+import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/features/expenses/constants';
 import { subDays, startOfMonth, startOfYear, parseISO, isWithinInterval } from 'date-fns';
 import Link from 'next/link';
 

@@ -90,16 +90,16 @@ State resets to defaults
 
 | File | Purpose | Lines | Status |
 |------|---------|-------|--------|
-| `components/ExportModal.tsx` | Main export UI component | 436 | ✅ Complete |
-| `lib/exportService.ts` | Export business logic service | 141 | ✅ Complete |
-| `components/Dashboard.tsx` | Integration point with CTA banner | +40 | ✅ Complete |
+| `src/features/export/components/ExportModal.tsx` | Main export UI component | 436 | ✅ Complete |
+| `src/features/export/lib/exportService.ts` | Export business logic service | 141 | ✅ Complete |
+| `src/features/analytics/components/Dashboard.tsx` | Integration point with CTA banner | +40 | ✅ Complete |
 | `package.json` | Dependencies (jsPDF) | +2 deps | ✅ Complete |
 
 ## Key Components
 
 ### 1. ExportModal Component
 
-**Location:** `components/ExportModal.tsx`
+**Location:** `src/features/export/components/ExportModal.tsx`
 **Type:** Client Component ('use client')
 **Lines:** 1-436
 
@@ -262,7 +262,7 @@ const resetState = () => {
 
 ### 2. ExportService Class
 
-**Location:** `lib/exportService.ts`
+**Location:** `src/features/export/lib/exportService.ts`
 **Type:** Static utility class
 **Lines:** 1-141
 
@@ -469,7 +469,7 @@ private static downloadFile(content: string, filename: string, mimeType: string)
 
 ### 3. Dashboard Integration
 
-**Location:** `components/Dashboard.tsx:48-77`
+**Location:** `src/features/analytics/components/Dashboard.tsx:48-77`
 
 #### State Addition
 
@@ -536,16 +536,16 @@ const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 ### Internal Dependencies
 
 ```typescript
-// From lib/utils.ts
+// From src/lib/utils.ts
 import { formatCurrency, formatDate, filterExpenses } from '@/lib/utils';
 
-// From lib/constants.ts
+// From src/features/expenses/constants.ts
 import { EXPENSE_CATEGORIES } from '@/lib/constants';
 
-// From types/expense.ts
+// From src/features/expenses/types.ts
 import { Expense, ExpenseCategory } from '@/types/expense';
 
-// From lib/exportService.ts
+// From src/features/export/lib/exportService.ts
 import { ExportService, ExportFormat } from '@/lib/exportService';
 ```
 
@@ -986,24 +986,24 @@ test('complete export workflow', async () => {
 ## Related Files
 
 ### Type Definitions
-- `types/expense.ts` - Expense interface and ExpenseCategory type
-- `lib/exportService.ts:7-13` - Export-specific types
+- `src/features/expenses/types.ts` - Expense interface and ExpenseCategory type
+- `src/features/export/lib/exportService.ts:7-13` - Export-specific types
 
 ### Utility Functions
-- `lib/utils.ts:formatCurrency()` - Currency formatting
-- `lib/utils.ts:formatDate()` - Date formatting
-- `lib/utils.ts:filterExpenses()` - Date range filtering
+- `src/lib/utils.ts:formatCurrency()` - Currency formatting
+- `src/lib/utils.ts:formatDate()` - Date formatting
+- `src/lib/utils.ts:filterExpenses()` - Date range filtering
 
 ### Constants
-- `lib/constants.ts:EXPENSE_CATEGORIES` - Category enumeration
-- `lib/constants.ts:CATEGORY_COLORS` - Category color mapping
+- `src/features/expenses/constants.ts:EXPENSE_CATEGORIES` - Category enumeration
+- `src/features/expenses/constants.ts:CATEGORY_COLORS` - Category color mapping
 
 ### Related Components
 - `components/ExpenseList.tsx` - Displays expenses that can be exported
 - `components/ExpenseFilters.tsx` - Similar filtering UI patterns
 
 ### Documentation
-- `code-analysis.md` - Comprehensive analysis comparing all 3 versions
+- `docs/dev/export-versions-analysis.md` - Comprehensive analysis comparing all 3 versions
 - `docs/user/how-to-data-export-v2.md` - User-facing guide (see below)
 
 ## Migration Guide
@@ -1014,10 +1014,10 @@ test('complete export workflow', async () => {
 
 **Steps:**
 1. Install dependencies: `npm install jspdf jspdf-autotable`
-2. Create `lib/exportService.ts` with ExportService class
-3. Create `components/ExportModal.tsx` component
+2. Create `src/features/export/lib/exportService.ts` with ExportService class
+3. Create `src/features/export/components/ExportModal.tsx` component
 4. Update `Dashboard.tsx` to use ExportModal instead of inline button
-5. Remove `exportToCSV()` from `lib/utils.ts` (optional, can keep for backward compatibility)
+5. Remove `exportToCSV()` from `src/lib/utils.ts` (optional, can keep for backward compatibility)
 
 **Rollback Plan:**
 - Keep V1 implementation in separate function
@@ -1114,4 +1114,4 @@ const ExportModal = dynamic(() => import('@/components/ExportModal'), {
 
 **Related Documentation:**
 - [User Guide: How to Export Data](../user/how-to-data-export-v2.md)
-- [Code Analysis: All Export Versions](../../code-analysis.md)
+- [Code Analysis: All Export Versions](./export-versions-analysis.md)

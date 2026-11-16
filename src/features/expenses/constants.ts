@@ -1,4 +1,4 @@
-import { ExpenseCategory } from '@/types/expense';
+import { ExpenseCategory } from '@/features/expenses/types';
 
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   'Food',

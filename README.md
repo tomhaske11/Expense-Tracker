@@ -1,6 +1,6 @@
 # Expense Tracker
 
-A modern, professional expense tracking web application built with Next.js 14, TypeScript, and Tailwind CSS.
+A modern, professional expense tracking web application built with Next.js 16, React 19, TypeScript, and Tailwind CSS.
 
 ## Features
 
@@ -38,7 +38,7 @@ A modern, professional expense tracking web application built with Next.js 14, T
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 with App Router
+- **Framework**: Next.js 16 with App Router
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **Charts**: Recharts
@@ -139,23 +139,23 @@ npm start
 
 ## Project Structure
 
+Feature-first layout under `src/` (see `CLAUDE.md` for details on each folder):
+
 ```
 expense-tracker-ai/
-├── app/
-│   ├── layout.tsx          # Root layout with metadata
-│   ├── page.tsx             # Main page with tab navigation
-│   └── globals.css          # Global styles
-├── components/
-│   ├── Dashboard.tsx        # Dashboard with charts and analytics
-│   ├── ExpenseForm.tsx      # Form for adding/editing expenses
-│   └── ExpenseList.tsx      # List view with filters
-├── hooks/
-│   └── useExpenses.ts       # Custom hook for expense management
-├── lib/
-│   ├── constants.ts         # App constants and configurations
-│   └── utils.ts             # Utility functions
-└── types/
-    └── expense.ts           # TypeScript type definitions
+├── src/
+│   ├── app/                     # Routes (Next.js App Router)
+│   │   ├── page.tsx             # Home: Dashboard / Expenses / Add tabs
+│   │   ├── top-categories/      # Category ranking
+│   │   ├── top-vendors/         # Vendor ranking
+│   │   └── monthly-insights/    # Donut, top 3, budget streak
+│   ├── features/
+│   │   ├── expenses/            # Core domain: types, constants, storage hook, filters, form, list
+│   │   ├── analytics/           # Dashboard, MonthlyInsights, aggregation (stats.ts)
+│   │   └── export/              # CSV / JSON / PDF export
+│   └── lib/                     # Shared, domain-free helpers (formatting, ids)
+├── public/                      # Static assets
+└── docs/                        # dev/ and user/ documentation
 ```
 
 ## Browser Support

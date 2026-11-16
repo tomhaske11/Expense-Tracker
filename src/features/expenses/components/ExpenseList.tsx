@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Expense, ExpenseCategory } from '@/types/expense';
-import { formatCurrency, formatDate, filterExpenses } from '@/lib/utils';
-import { EXPENSE_CATEGORIES, CATEGORY_COLORS, CATEGORY_ICONS } from '@/lib/constants';
+import { Expense, ExpenseCategory } from '@/features/expenses/types';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { filterExpenses } from '@/features/expenses/lib/filters';
+import { EXPENSE_CATEGORIES, CATEGORY_COLORS, CATEGORY_ICONS } from '@/features/expenses/constants';
 import { format } from 'date-fns';
 
 interface ExpenseListProps {

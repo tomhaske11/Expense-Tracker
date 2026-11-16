@@ -1,14 +1,12 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useExpenses } from '@/hooks/useExpenses';
-import { DateRangeFilter } from '@/types/expense';
-import {
-  formatCurrency,
-  filterExpensesByDateRange,
-  calculateVendorStats,
-} from '@/lib/utils';
-import { CATEGORY_ICONS, CATEGORY_COLORS } from '@/lib/constants';
+import { useExpenses } from '@/features/expenses/hooks/useExpenses';
+import { DateRangeFilter } from '@/features/expenses/types';
+import { formatCurrency } from '@/lib/utils';
+import { filterExpensesByDateRange } from '@/features/expenses/lib/filters';
+import { calculateVendorStats } from '@/features/analytics/lib/stats';
+import { CATEGORY_ICONS, CATEGORY_COLORS } from '@/features/expenses/constants';
 import Link from 'next/link';
 
 type VendorLimit = 5 | 10 | 20 | 'all';
@@ -226,13 +224,13 @@ interface VendorCardProps {
 function VendorCard({ vendor, rank }: VendorCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const rankColors = {
+  const rankColors: Record<number, string> = {
     1: 'bg-yellow-100 text-yellow-700 border-yellow-300',
     2: 'bg-gray-100 text-gray-700 border-gray-300',
     3: 'bg-orange-100 text-orange-700 border-orange-300',
   };
 
-  const rankColor = (rankColors as any)[rank] || 'bg-blue-50 text-blue-700 border-blue-200';
+  const rankColor = rankColors[rank] ?? 'bg-blue-50 text-blue-700 border-blue-200';
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">

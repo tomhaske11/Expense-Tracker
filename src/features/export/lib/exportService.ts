@@ -1,4 +1,4 @@
-import { Expense } from '@/types/expense';
+import { Expense } from '@/features/expenses/types';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
