@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ExpenseFormData, ExpenseCategory, Expense } from '@/types/expense';
-import { EXPENSE_CATEGORIES } from '@/lib/constants';
+import { useState } from 'react';
+import { ExpenseFormData, ExpenseCategory, Expense } from '@/features/expenses/types';
+import { EXPENSE_CATEGORIES } from '@/features/expenses/constants';
 import { format } from 'date-fns';
 
 interface ExpenseFormProps {
@@ -26,17 +26,6 @@ export default function ExpenseForm({
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof ExpenseFormData, string>>>({});
-
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        date: initialData.date,
-        amount: initialData.amount.toString(),
-        category: initialData.category,
-        description: initialData.description,
-      });
-    }
-  }, [initialData]);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof ExpenseFormData, string>> = {};

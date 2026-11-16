@@ -1,15 +1,22 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Expense } from '@/types/expense';
+import { Expense } from '@/features/expenses/types';
+import { formatCurrency } from '@/lib/utils';
+import { getCurrentMonthExpenses } from '@/features/expenses/lib/filters';
+import { calculateCategoryBreakdown } from '@/features/analytics/lib/stats';
+import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/features/expenses/constants';
 import {
-  formatCurrency,
-  getCurrentMonthExpenses,
-  calculateCategoryBreakdown,
-} from '@/lib/utils';
-import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/lib/constants';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import ExportModal from '@/components/ExportModal';
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Legend,
+  Tooltip,
+  type PieLabelRenderProps,
+  type TooltipContentProps,
+} from 'recharts';
+import ExportModal from '@/features/export/components/ExportModal';
 
 interface DashboardProps {
   expenses: Expense[];
@@ -132,7 +139,7 @@ export default function Dashboard({ expenses }: DashboardProps) {
                       <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name]} />
                     ))}
                   </Pie>
-                  <Tooltip content={<CustomTooltip />} />
+                  <Tooltip content={CustomTooltip} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -224,14 +231,8 @@ function SummaryCard({ title, value, icon, color, subtitle }: SummaryCardProps) 
   );
 }
 
-function renderCustomLabel({
-  cx,
-  cy,
-  midAngle,
-  innerRadius,
-  outerRadius,
-  percentage,
-}: any) {
+function renderCustomLabel({ cx, cy, midAngle = 0, innerRadius, outerRadius, percent = 0 }: PieLabelRenderProps) {
+  const percentage = percent * 100;
   const RADIAN = Math.PI / 180;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -253,12 +254,12 @@ function renderCustomLabel({
   );
 }
 
-function CustomTooltip({ active, payload }: any) {
+function CustomTooltip({ active, payload }: TooltipContentProps) {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white px-4 py-2 rounded-lg shadow-lg border border-gray-200">
         <p className="font-medium text-gray-900">{payload[0].name}</p>
-        <p className="text-sm text-gray-600">{formatCurrency(payload[0].value)}</p>
+        <p className="text-sm text-gray-600">{formatCurrency(Number(payload[0].value))}</p>
         <p className="text-xs text-gray-500">{payload[0].payload.percentage.toFixed(1)}%</p>
       </div>
     );

@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useExpenses } from '@/hooks/useExpenses';
-import { Expense, ExpenseFormData } from '@/types/expense';
-import ExpenseForm from '@/components/ExpenseForm';
-import ExpenseList from '@/components/ExpenseList';
-import Dashboard from '@/components/Dashboard';
-import { exportToCSV } from '@/lib/utils';
+import { useExpenses } from '@/features/expenses/hooks/useExpenses';
+import { Expense, ExpenseFormData } from '@/features/expenses/types';
+import { exportToCSV } from '@/features/export/lib/quickCsv';
+import ExpenseForm from '@/features/expenses/components/ExpenseForm';
+import ExpenseList from '@/features/expenses/components/ExpenseList';
+import Dashboard from '@/features/analytics/components/Dashboard';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -79,6 +79,16 @@ export default function Home() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                     Top Categories
+                  </Link>
+                  <Link
+                    href="/monthly-insights"
+                    className="hidden sm:flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                    </svg>
+                    Insights
                   </Link>
                   <button
                     onClick={handleExport}
@@ -199,6 +209,7 @@ export default function Home() {
                 {editingExpense ? 'Edit Expense' : 'Add New Expense'}
               </h2>
               <ExpenseForm
+                key={editingExpense?.id ?? 'new'}
                 onSubmit={editingExpense ? handleUpdateExpense : handleAddExpense}
                 onCancel={editingExpense ? handleCancelEdit : undefined}
                 initialData={editingExpense || undefined}
@@ -220,6 +231,16 @@ export default function Home() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
             Analytics
+          </Link>
+          <Link
+            href="/monthly-insights"
+            className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+            </svg>
+            Insights
           </Link>
           <button
             onClick={handleExport}

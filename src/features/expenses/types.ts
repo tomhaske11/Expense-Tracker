@@ -42,13 +42,3 @@ export interface ExpenseSummary {
 }
 
 export type DateRangeFilter = 'last7days' | 'last30days' | 'thisMonth' | 'thisYear' | 'allTime';
-
-export interface VendorStats {
-  vendor: string;
-  totalAmount: number;
-  percentage: number;
-  transactionCount: number;
-  averageAmount: number;
-  topCategory: ExpenseCategory;
-  categoryBreakdown: Record<ExpenseCategory, number>;
-}

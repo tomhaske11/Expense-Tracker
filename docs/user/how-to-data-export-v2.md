@@ -629,7 +629,7 @@ We'd love to hear from you! If this guide was helpful or if you have suggestions
 
 **Related Resources:**
 - [Technical Documentation for Developers](../dev/data-export-v2-implementation.md)
-- [Feature Comparison: All Export Versions](../../code-analysis.md)
+- [Feature Comparison: All Export Versions](../dev/export-versions-analysis.md)
 - [Video Tutorial: Exporting Data](./tutorials/export-video.md) *(coming soon)*
 
 ---

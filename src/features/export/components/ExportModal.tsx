@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Expense, ExpenseCategory } from '@/types/expense';
-import { ExportService, ExportFormat } from '@/lib/exportService';
-import { EXPENSE_CATEGORIES } from '@/lib/constants';
-import { filterExpenses, formatCurrency, formatDate } from '@/lib/utils';
+import { Expense, ExpenseCategory } from '@/features/expenses/types';
+import { EXPENSE_CATEGORIES } from '@/features/expenses/constants';
+import { filterExpenses } from '@/features/expenses/lib/filters';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { ExportService, ExportFormat } from '@/features/export/lib/exportService';
 import { format } from 'date-fns';
 
 interface ExportModalProps {
