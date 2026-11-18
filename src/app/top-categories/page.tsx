@@ -4,9 +4,12 @@ import { useState, useMemo } from 'react';
 import { useExpenses } from '@/features/expenses/hooks/useExpenses';
 import { ExpenseCategory } from '@/features/expenses/types';
 import { formatCurrency } from '@/lib/utils';
-import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/features/expenses/constants';
+import { CATEGORY_COLORS } from '@/features/expenses/constants';
+import CategoryIcon from '@/features/expenses/components/CategoryIcon';
+import { DashboardIcon } from '@/lib/icons';
 import { subDays, startOfMonth, startOfYear, parseISO, isWithinInterval } from 'date-fns';
 import Link from 'next/link';
+import AppHeader from '@/app/_components/AppHeader';
 
 type DateFilter = 'last7days' | 'last30days' | 'thisMonth' | 'thisYear' | 'allTime';
 type DisplayLimit = 5 | 10 | 'all';
@@ -83,64 +86,39 @@ export default function TopCategoriesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-canvas">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading expenses...</p>
+          <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-ink-muted">Loading expenses...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-canvas">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/"
-                className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-              >
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white text-xl font-bold">
-                  💸
-                </div>
-                <h1 className="text-2xl font-bold text-gray-900">Expense Tracker</h1>
-              </Link>
-            </div>
-            <Link
-              href="/"
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors font-medium"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span className="hidden sm:inline">Back to Dashboard</span>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Top Expense Categories</h2>
-          <p className="text-gray-600">Analyze your spending patterns by category</p>
+          <h2 className="text-3xl font-bold text-ink mb-2">Top Expense Categories</h2>
+          <p className="text-ink-muted">Analyze your spending patterns by category</p>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-panel rounded-lg p-6 mb-6 border border-line">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date Range Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-ink-soft mb-2">
                 Date Range
               </label>
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value as DateFilter)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-line rounded-lg focus:ring-2 focus:ring-accent focus:border-accent"
               >
                 <option value="last7days">Last 7 Days</option>
                 <option value="last30days">Last 30 Days</option>
@@ -152,13 +130,13 @@ export default function TopCategoriesPage() {
 
             {/* Display Limit Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-ink-soft mb-2">
                 Show Categories
               </label>
               <select
                 value={displayLimit}
                 onChange={(e) => setDisplayLimit(e.target.value === 'all' ? 'all' : parseInt(e.target.value) as DisplayLimit)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-line rounded-lg focus:ring-2 focus:ring-accent focus:border-accent"
               >
                 <option value={5}>Top 5</option>
                 <option value={10}>Top 10</option>
@@ -169,19 +147,19 @@ export default function TopCategoriesPage() {
         </div>
 
         {/* Summary Card */}
-        <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg shadow-sm p-6 mb-6 text-white">
+        <div className="bg-panel border border-line border-l-2 border-l-accent rounded-lg p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <p className="text-blue-100 text-sm mb-1">Total Spending</p>
-              <p className="text-3xl font-bold">{formatCurrency(totalSpent)}</p>
+              <p className="text-xs uppercase tracking-widest text-ink-muted mb-2">Total Spending</p>
+              <p className="text-3xl font-semibold text-ink">{formatCurrency(totalSpent)}</p>
             </div>
             <div>
-              <p className="text-blue-100 text-sm mb-1">Total Transactions</p>
-              <p className="text-3xl font-bold">{filteredExpenses.length}</p>
+              <p className="text-xs uppercase tracking-widest text-ink-muted mb-2">Total Transactions</p>
+              <p className="text-3xl font-semibold text-ink">{filteredExpenses.length}</p>
             </div>
             <div>
-              <p className="text-blue-100 text-sm mb-1">Categories</p>
-              <p className="text-3xl font-bold">{categoryStats.length}</p>
+              <p className="text-xs uppercase tracking-widest text-ink-muted mb-2">Categories</p>
+              <p className="text-3xl font-semibold text-ink">{categoryStats.length}</p>
             </div>
           </div>
         </div>
@@ -190,11 +168,11 @@ export default function TopCategoriesPage() {
         {displayedStats.length > 0 ? (
           <div className="space-y-4">
             {displayedStats.map((stat, index) => (
-              <div key={stat.category} className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
+              <div key={stat.category} className="bg-panel rounded-lg p-6 transition-shadow border border-line">
                 <div className="flex items-start gap-4">
                   {/* Rank Badge */}
-                  <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
-                    index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-orange-600' : 'bg-gray-300'
+                  <div className={`flex-shrink-0 w-12 h-12 rounded-full border flex items-center justify-center font-semibold text-lg ${
+                    index === 0 ? 'bg-accent text-accent-ink border-accent' : index < 3 ? 'bg-accent/10 text-accent border-accent/40' : 'bg-panel-raised text-ink-muted border-line'
                   }`}>
                     #{index + 1}
                   </div>
@@ -202,17 +180,17 @@ export default function TopCategoriesPage() {
                   {/* Category Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-3">
-                      <span className="text-3xl">{CATEGORY_ICONS[stat.category]}</span>
-                      <h3 className="text-xl font-semibold text-gray-900">{stat.category}</h3>
+                      <CategoryIcon category={stat.category} className="w-7 h-7" />
+                      <h3 className="text-xl font-semibold text-ink">{stat.category}</h3>
                     </div>
 
                     {/* Progress Bar */}
                     <div className="mb-4">
-                      <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+                      <div className="flex items-center justify-between text-sm text-ink-muted mb-1">
                         <span>Percentage of Total Spending</span>
                         <span className="font-medium">{stat.percentage.toFixed(1)}%</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div className="w-full bg-panel-raised rounded-full h-3">
                         <div
                           className="h-3 rounded-full transition-all duration-500"
                           style={{
@@ -225,17 +203,17 @@ export default function TopCategoriesPage() {
 
                     {/* Stats Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-600 mb-1">Total Amount</p>
-                        <p className="text-lg font-bold text-gray-900">{formatCurrency(stat.totalAmount)}</p>
+                      <div className="bg-canvas rounded-lg p-3">
+                        <p className="text-xs text-ink-muted mb-1">Total Amount</p>
+                        <p className="text-lg font-bold text-ink">{formatCurrency(stat.totalAmount)}</p>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-600 mb-1">Transactions</p>
-                        <p className="text-lg font-bold text-gray-900">{stat.transactionCount}</p>
+                      <div className="bg-canvas rounded-lg p-3">
+                        <p className="text-xs text-ink-muted mb-1">Transactions</p>
+                        <p className="text-lg font-bold text-ink">{stat.transactionCount}</p>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-600 mb-1">Average Amount</p>
-                        <p className="text-lg font-bold text-gray-900">{formatCurrency(stat.averageAmount)}</p>
+                      <div className="bg-canvas rounded-lg p-3">
+                        <p className="text-xs text-ink-muted mb-1">Average Amount</p>
+                        <p className="text-lg font-bold text-ink">{formatCurrency(stat.averageAmount)}</p>
                       </div>
                     </div>
                   </div>
@@ -244,17 +222,17 @@ export default function TopCategoriesPage() {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <div className="text-6xl mb-4">📊</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Data Available</h3>
-            <p className="text-gray-500 mb-4">
+          <div className="bg-panel rounded-lg p-8 text-center border border-line">
+            <DashboardIcon className="w-14 h-14 mx-auto mb-4 text-ink-faint" />
+            <h3 className="text-xl font-semibold text-ink mb-2">No Data Available</h3>
+            <p className="text-ink-muted mb-4">
               {expenses.length === 0
                 ? "You haven't added any expenses yet. Start tracking your spending to see category insights!"
                 : "No expenses found for the selected date range. Try adjusting your filters."}
             </p>
             <Link
               href="/"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-accent-ink rounded-lg hover:bg-accent-strong transition-colors font-medium"
             >
               Go to Dashboard
             </Link>

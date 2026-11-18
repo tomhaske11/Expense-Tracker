@@ -1,6 +1,6 @@
-# Expense Tracker
+# expenseAI
 
-A modern, professional expense tracking web application built with Next.js 16, React 19, TypeScript, and Tailwind CSS.
+A personal expense tracker with Claude built in: a dark, black-and-teal web application built with Next.js 16, React 19, TypeScript, and Tailwind CSS.
 
 ## Features
 

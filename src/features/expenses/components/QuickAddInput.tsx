@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { QUICK_ADD_MAX_LENGTH } from '@/features/expenses/constants';
 import type { ParsedExpense } from '@/features/expenses/lib/quickAdd';
 import { ReceiptImageError, prepareReceiptImage } from '@/features/expenses/lib/receiptImage';
+import { AlertIcon, CameraIcon, SparkleIcon } from '@/lib/icons';
 
 interface QuickAddInputProps {
   /** Called with the parsed fields; the parent pre-fills the form for the user to review. */
@@ -97,11 +98,12 @@ export default function QuickAddInput({ onParsed }: QuickAddInputProps) {
   const loading = status.kind === 'loading';
 
   return (
-    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-      <label htmlFor="quick-add" className="block text-sm font-medium text-gray-900 mb-1">
-        ✨ Quick add
+    <div className="rounded-lg border border-accent/30 bg-accent/10 p-4">
+      <label htmlFor="quick-add" className="block text-sm font-medium text-ink mb-1">
+        <SparkleIcon className="inline w-4 h-4 mr-1.5 -mt-0.5 text-accent" />
+        Quick add
       </label>
-      <p className="text-xs text-gray-600 mb-2">
+      <p className="text-xs text-ink-muted mb-2">
         Describe the expense in your own words, or scan a receipt, and we&apos;ll fill in the form for you to check.
       </p>
       <div className="flex flex-col sm:flex-row gap-2">
@@ -119,14 +121,14 @@ export default function QuickAddInput({ onParsed }: QuickAddInputProps) {
               void runText();
             }
           }}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 px-3 py-2 border border-line rounded-lg bg-panel focus:outline-none focus:ring-2 focus:ring-accent"
         />
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => void runText()}
             disabled={!text.trim() || loading}
-            className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+            className="flex-1 sm:flex-none px-4 py-2 bg-accent text-accent-ink rounded-lg hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
             {loading && status.source === 'text' ? 'Reading…' : 'Fill in'}
           </button>
@@ -134,9 +136,9 @@ export default function QuickAddInput({ onParsed }: QuickAddInputProps) {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={loading}
-            className="flex-1 sm:flex-none px-4 py-2 bg-white text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap"
+            className="flex-1 sm:flex-none px-4 py-2 bg-panel text-accent border border-accent/30 rounded-lg hover:bg-accent/15 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium whitespace-nowrap"
           >
-            {loading && status.source === 'receipt' ? 'Reading receipt…' : '📷 Scan receipt'}
+            {loading && status.source === 'receipt' ? 'Reading receipt…' : <><CameraIcon className="inline w-4 h-4 mr-1.5 -mt-0.5" />Scan receipt</>}
           </button>
           <input
             ref={fileInputRef}
@@ -163,22 +165,23 @@ export default function QuickAddInput({ onParsed }: QuickAddInputProps) {
               width={64}
               height={80}
               unoptimized
-              className="h-20 w-16 object-cover rounded border border-gray-300 bg-white"
+              className="h-20 w-16 object-cover rounded border border-line bg-panel"
             />
           </a>
         )}
         <div>
-          {loading && status.source === 'receipt' && <p className="text-gray-600">Reading the receipt…</p>}
+          {loading && status.source === 'receipt' && <p className="text-ink-muted">Reading the receipt…</p>}
           {status.kind === 'done' && (
-            <p className="text-gray-700">
+            <p className="text-ink-soft">
               Filled in below. Check it, then save.
-              {status.note && <span className="block text-amber-700">⚠️ {status.note}</span>}
+              {status.note && <span className="block text-amber-300"><AlertIcon className="inline w-4 h-4 mr-1 -mt-0.5" />
+                  {status.note}</span>}
             </p>
           )}
-          {status.kind === 'error' && <p className="text-red-600">{status.message}</p>}
+          {status.kind === 'error' && <p className="text-red-400">{status.message}</p>}
         </div>
       </div>
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-ink-muted">
         What you type or scan here is sent to Anthropic&apos;s Claude API to read it.
       </p>
     </div>

@@ -1,4 +1,5 @@
 import { ExpenseCategory } from '@/features/expenses/types';
+import { BagIcon, BoxIcon, CarIcon, FilmIcon, Icon, ReceiptIcon, UtensilsIcon } from '@/lib/icons';
 
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   'Food',
@@ -9,22 +10,27 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   'Other',
 ];
 
+/**
+ * Chart colors for the dark theme, validated as a set (dataviz palette check, dark surface
+ * #171717): lightness band, chroma, contrast and adjacent-pair color-blind separation pass in
+ * this order. Food is the brand teal. Always pair a color with the category name or icon.
+ */
 export const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
-  Food: '#10b981',
-  Transportation: '#3b82f6',
-  Entertainment: '#8b5cf6',
-  Shopping: '#ec4899',
-  Bills: '#f59e0b',
-  Other: '#6b7280',
+  Food: '#14a89c',
+  Transportation: '#d95926',
+  Entertainment: '#3987e5',
+  Shopping: '#c98500',
+  Bills: '#9085e9',
+  Other: '#d55181',
 };
 
-export const CATEGORY_ICONS: Record<ExpenseCategory, string> = {
-  Food: '🍽️',
-  Transportation: '🚗',
-  Entertainment: '🎮',
-  Shopping: '🛍️',
-  Bills: '📄',
-  Other: '📦',
+export const CATEGORY_ICONS: Record<ExpenseCategory, Icon> = {
+  Food: UtensilsIcon,
+  Transportation: CarIcon,
+  Entertainment: FilmIcon,
+  Shopping: BagIcon,
+  Bills: ReceiptIcon,
+  Other: BoxIcon,
 };
 
 /** Max characters accepted by natural-language quick add. */

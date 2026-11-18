@@ -5,6 +5,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { formatDate } from '@/lib/utils';
 import { APP_NOTE_PREFIX, useAssistantChat } from '@/features/assistant/hooks/useAssistantChat';
 import ProposalCard from '@/features/assistant/components/ProposalCard';
+import { SearchIcon } from '@/lib/icons';
 
 /*
  * Renders an assistant conversation: user messages (optional), Claude's replies, tool-call
@@ -41,8 +42,8 @@ function describeToolCall(name: string, input: unknown): string {
 
 function ToolChip({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">
-      <span aria-hidden>🔎</span>
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-panel-raised px-3 py-1 text-xs text-ink-muted">
+      <SearchIcon className="w-3.5 h-3.5 text-accent" />
       {children}
     </span>
   );
@@ -50,7 +51,7 @@ function ToolChip({ children }: { children: ReactNode }) {
 
 function AssistantBubble({ text }: { text: string }) {
   return (
-    <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-2.5 text-gray-900 whitespace-pre-wrap break-words">
+    <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-panel-raised px-4 py-2.5 text-ink whitespace-pre-wrap break-words">
       {text}
     </div>
   );
@@ -82,7 +83,7 @@ export default function AssistantTranscript({ chat, hideUserMessages = false }: 
         if (!text) return null; // tool results only
         return (
           <div key={index} className="flex justify-end">
-            <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2.5 text-white whitespace-pre-wrap break-words">
+            <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-accent px-4 py-2.5 text-accent-ink whitespace-pre-wrap break-words">
               {text}
             </div>
           </div>
@@ -132,16 +133,16 @@ export default function AssistantTranscript({ chat, hideUserMessages = false }: 
           <AssistantBubble text={chat.streamingText} />
         ) : (
           <div className="flex items-center gap-1 px-2 py-3" aria-label="Claude is thinking">
-            <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.3s]" />
-            <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce [animation-delay:-0.15s]" />
-            <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" />
+            <span className="w-2 h-2 rounded-full bg-ink-faint animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-2 h-2 rounded-full bg-ink-faint animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-2 h-2 rounded-full bg-ink-faint animate-bounce" />
           </div>
         )}
       </div>
     )}
 
     {chat.error && (
-      <p className="rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">{chat.error}</p>
+      <p className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2 text-sm text-red-300">{chat.error}</p>
     )}
     </>
   );

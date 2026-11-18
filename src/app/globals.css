@@ -1,26 +1,41 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * expenseAI theme: dark only, black + teal. Use these tokens (bg-canvas, bg-panel,
+ * border-line, text-ink, text-accent, ...) instead of raw palette colors, so the look
+ * can change in one place. Status colors (red / amber) stay Tailwind's, tinted for dark.
+ */
+@theme {
+  --color-canvas: #0a0a0a; /* page background */
+  --color-panel: #141414; /* cards */
+  --color-panel-raised: #1f1f1f; /* inputs, hover, nested surfaces */
+  --color-line: #2a2a2a; /* borders, dividers, chart grid */
+
+  --color-ink: #f5f5f5; /* headings, numbers */
+  --color-ink-soft: #d4d4d4; /* body text */
+  --color-ink-muted: #a3a3a3; /* secondary text */
+  --color-ink-faint: #8a8a8a; /* captions, placeholders */
+
+  --color-accent: #2dd4bf; /* teal: primary actions, links, highlights */
+  --color-accent-strong: #5eead4; /* hover state of accent */
+  --color-accent-ink: #0a0a0a; /* text on an accent background */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  color-scheme: dark; /* native controls, scrollbars and date pickers render dark */
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
