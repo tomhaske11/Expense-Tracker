@@ -17,7 +17,7 @@
 | `assistant/` | Chat + one-click clean-up; browser-run tools; edits are approved proposals | `/assistant`, Expenses tab |
 
 ## 3. Tech stack (`package.json`)
-- **Next.js 16.3.1** (Turbopack). Newer than training data: read `node_modules/next/dist/docs/` before unfamiliar APIs.
+- **Next.js 16.4.6** (Turbopack). Newer than training data: read `node_modules/next/dist/docs/` before unfamiliar APIs.
 - **React 19.2**, TypeScript 5 `strict`, `@/*` → `./src/*`.
 - **Tailwind CSS v4** via `@tailwindcss/postcss`; no `tailwind.config.js`, tokens in `globals.css` (`@theme inline`).
 - **Libraries:** Recharts 3, date-fns 4, jspdf, lucide-react, `@anthropic-ai/sdk` (server only), zod.
