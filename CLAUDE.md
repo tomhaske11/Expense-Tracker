@@ -3,14 +3,15 @@
 # Expense Tracker — Project Guide
 
 ## 1. Application type
-- **Client-side web app:** a single-user expense tracker on Next.js (App Router).
-- **No server side:** no backend, API routes, database, server actions, or auth. Data lives in browser `localStorage`.
+- **Web app, mostly client-side:** a single-user expense tracker on Next.js (App Router).
+- **Data:** lives only in browser `localStorage`. No database, server actions, or auth.
+- **Server:** one API route, `POST /api/quick-add`, which calls Claude. It only parses text; it never stores or sees saved expenses.
 - **Rendering:** every page is a `'use client'` component, prerendered as static HTML at build time.
 
 ## 2. Main features (`src/features/`)
 | Feature | Does | Routes |
 |---|---|---|
-| `expenses/` (core) | Data model, categories, storage, add/edit/delete, search and filter | `/` (Expenses, Add tabs) |
+| `expenses/` (core) | Data model, categories, storage, add/edit/delete, search and filter, natural-language quick add | `/` (Expenses, Add tabs) |
 | `analytics/` | Summary and pie chart, category/vendor rankings, monthly insights (donut, top 3, budget streak) | `/` (Dashboard tab), `/top-categories`, `/top-vendors`, `/monthly-insights` |
 | `export/` | Quick CSV from the header; modal with CSV/JSON/PDF, filters, and preview | header button, Dashboard banner |
 
@@ -18,7 +19,7 @@
 - **Next.js 16.3.1** (Turbopack, `src/` folder convention). This is newer than most training data, so read `node_modules/next/dist/docs/` before using an unfamiliar API.
 - **React 19.2.** TypeScript 5 (`strict`); `@/*` maps to `./src/*`.
 - **Tailwind CSS v4** via `@tailwindcss/postcss`. No `tailwind.config.js`; theme tokens are in `src/app/globals.css` under `@theme inline`.
-- **Libraries:** Recharts 3, date-fns 4, jspdf + jspdf-autotable (PDF is generated in the browser).
+- **Libraries:** Recharts 3, date-fns 4, jspdf + jspdf-autotable (PDF is generated in the browser), `@anthropic-ai/sdk` + zod (server only).
 - **Lint:** ESLint 9 flat config (next core-web-vitals + typescript).
 - **Tests:** no test framework is installed.
 
@@ -28,13 +29,16 @@ Feature-first: routes are thin, logic lives in features, and domain-free helpers
 src/
   app/                     ROUTES: one folder per URL; page.tsx composes feature components
     layout.tsx, globals.css, page.tsx ("/" tabs), top-categories/, top-vendors/, monthly-insights/
+    api/quick-add/route.ts POST endpoint: validates input, calls the server parser
   features/
     expenses/              CORE DOMAIN
       types.ts             Expense, ExpenseCategory, ExpenseFormData, DateRangeFilter
       constants.ts         EXPENSE_CATEGORIES, CATEGORY_COLORS, CATEGORY_ICONS, STORAGE_KEY
       hooks/useExpenses.ts the ONLY localStorage access + CRUD
       lib/filters.ts       getCurrentMonthExpenses, filterExpenses, filterExpensesByDateRange
-      components/          ExpenseForm, ExpenseList
+      lib/quickAdd.ts      zod request/response schemas for quick add (client imports types only)
+      server/              server-only code ('server-only'): parseExpenseText calls Claude
+      components/          ExpenseForm, ExpenseList, QuickAddInput
     analytics/             READ-ONLY AGGREGATION + CHARTS
       types.ts, lib/stats.ts (calculateCategoryBreakdown, calculateVendorStats, calculateBudgetStreak)
       components/          Dashboard, MonthlyInsights
@@ -42,12 +46,14 @@ src/
       lib/exportService.ts CSV / JSON / PDF (put new export work here)
       lib/quickCsv.ts      legacy one-click CSV used by the header button; don't extend it
       components/          ExportModal
+  integrations/anthropic/  server-only Claude client + CLAUDE_MODEL ('claude-opus-5-5')
   lib/utils.ts             SHARED, domain-free: formatCurrency, formatDate, generateId
 public/                    static assets (stays at the repo root)
 docs/dev/, docs/user/      implementation docs and how-to guides (/document-feature)
 ```
 **Import direction:** `app → analytics → export → expenses → lib`. Never import upward.
-- `lib/` imports no feature. A helper that needs `Expense` belongs in a feature.
+- `lib/` and `integrations/` import no feature. A helper that needs `Expense` belongs in a feature.
+- Only `server/` folders, `src/app/api/`, and `integrations/` may import `@/integrations/*` or the SDK. Mark those files `import 'server-only'`.
 - Import across features by full path. Don't add barrel `index.ts` files.
 
 **Where new code goes:**
@@ -60,10 +66,12 @@ docs/dev/, docs/user/      implementation docs and how-to guides (/document-feat
 - Pages should not hold aggregation logic. `top-categories/page.tsx` still does, so don't copy it; move logic out when you touch it.
 
 ## 5. External systems
-- **None at runtime:** no API calls, SDKs, env vars, or secrets.
-- **Exports** download through a Blob link.
-- **Fonts:** `next/font/google` fetches them at build time and serves them from the app.
-- **Adding one:** put endpoints in `src/app/api/<name>/route.ts` and client code in `src/integrations/<name>/`. Put secrets in `.env.local` (already gitignored), then update section 1.
+- **Anthropic Claude API** (quick add only), called from the server with `ANTHROPIC_API_KEY` in `.env.local` (gitignored). The key must never reach the browser.
+  - Requests use `beta.messages.parse` with a zod output schema, `effort: 'low'`, and server-side refusal fallbacks.
+  - The user's text is sent to Anthropic; the form says so. Server code re-validates Claude's output (`sanitize`) before returning it.
+  - The user always reviews the prefilled form before saving. Keep that: Claude never writes to storage.
+- **Exports** download through a Blob link. **Fonts** (`next/font/google`) are fetched at build time.
+- **Adding one:** endpoints in `src/app/api/<name>/route.ts`, client code in `src/integrations/<name>/`, secrets in `.env.local`.
 
 ## 6. Build and deploy
 ```bash
@@ -73,7 +81,8 @@ npm start          # serve the build
 npm run lint       # must stay clean
 npx tsc --noEmit   # run after a build or dev run (LayoutProps types are generated in .next/)
 ```
-- **No deploy setup:** no Dockerfile, `scripts/`, CI, or deploy config. Deploy manually with `next build` + `next start`.
+- **No deploy setup:** no Dockerfile, `scripts/`, CI, or deploy config. Deploy with `next build` + `next start` (not a static export: the API route needs a server).
+- **Before hosting publicly,** add auth or rate limiting to `/api/quick-add`. There's no login, so anyone could spend the API key.
 - **If you add CI,** use `.github/workflows/` and run lint, tsc, and build.
 - **Never commit `.next/`.**
 
@@ -115,7 +124,7 @@ npx tsc --noEmit   # run after a build or dev run (LayoutProps types are generat
 
 **Validation (`ExpenseForm`)**
 - Date required; amount > 0 matching `/^\d+\.?\d{0,2}$/`; description required.
-- Future dates are **not** rejected.
+- Future dates are blocked by the date input's `max` (browser validation); quick add clamps them to today.
 - The parent resets the form by changing its `key`.
 
 **Lint**
