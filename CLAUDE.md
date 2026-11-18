@@ -3,16 +3,16 @@
 # Expense Tracker — Project Guide
 
 ## 1. Application type
-- **Web app, mostly client-side:** single-user expense tracker, Next.js App Router.
+- **Web app, mostly client-side:** single-user, Next.js App Router.
 - **Data:** browser `localStorage` only. No database, server actions, or auth.
-- **Server:** POST routes call Claude: `/api/quick-add` (text), `/api/receipt` (photo), `/api/assistant` (chat turn). None store data.
-- **Rendering:** all pages are `'use client'`, prerendered static.
+- **Server:** POST routes call Claude: `/api/quick-add` (text), `/api/receipt` (photo), `/api/coach`, `/api/assistant`. None store data.
+- **Rendering:** all pages `'use client'`, prerendered static.
 
 ## 2. Main features (`src/features/`)
 | Feature | Does | Routes |
 |---|---|---|
 | `expenses/` (core) | Data model, categories, storage, add/edit/delete, search and filter, quick add from text or a receipt photo | `/` (Expenses, Add tabs) |
-| `analytics/` | Summary and pie chart, category/vendor rankings, monthly insights (donut, top 3, budget streak) | `/` (Dashboard tab), `/top-categories`, `/top-vendors`, `/monthly-insights` |
+| `analytics/` | Summary, pie chart, category/vendor rankings, monthly insights (donut, top 3, streak, daily budget, Claude coach) | `/` (Dashboard tab), `/top-categories`, `/top-vendors`, `/monthly-insights` |
 | `export/` | Quick CSV from the header; modal with CSV/JSON/PDF, filters, and preview | header button, Dashboard banner |
 | `assistant/` | "Ask your money" chat; Claude's tools run in the browser, edits are proposals the user approves | `/assistant` |
 
@@ -20,7 +20,7 @@
 - **Next.js 16.3.1** (Turbopack, `src/`). Newer than most training data: read `node_modules/next/dist/docs/` before using an unfamiliar API.
 - **React 19.2.** TypeScript 5 (`strict`); `@/*` maps to `./src/*`.
 - **Tailwind CSS v4** via `@tailwindcss/postcss`. No `tailwind.config.js`; tokens are in `globals.css` (`@theme inline`).
-- **Libraries:** Recharts 3, date-fns 4, jspdf + jspdf-autotable (PDF is generated in the browser), `@anthropic-ai/sdk` (server; `import type` elsewhere), zod.
+- **Libraries:** Recharts 3, date-fns 4, jspdf + jspdf-autotable (browser PDF), `@anthropic-ai/sdk` (server; `import type` elsewhere), zod.
 - **Lint:** ESLint 9 flat config (next core-web-vitals + typescript). **Tests:** none installed.
 
 ## 4. Code organization
@@ -29,29 +29,31 @@ Feature-first: thin routes, logic in features, domain-free helpers in `lib/`.
 src/
   app/                     ROUTES: a folder per URL; page.tsx composes features
     layout.tsx, globals.css, page.tsx ("/" tabs), top-categories/, top-vendors/, monthly-insights/, assistant/
-    api/quick-add/, api/receipt/, api/assistant/  validate input, call feature server code
+    api/<quick-add|receipt|coach|assistant>/  validate input, call feature server code
   features/
     expenses/              CORE DOMAIN
       types.ts             Expense, ExpenseCategory, ExpenseFormData, DateRangeFilter
       constants.ts         EXPENSE_CATEGORIES, CATEGORY_COLORS, CATEGORY_ICONS, STORAGE_KEY
-      hooks/useExpenses.ts the ONLY localStorage access + CRUD
+      hooks/useExpenses.ts expense storage + CRUD
       lib/filters.ts       getCurrentMonthExpenses, filterExpenses, filterExpensesByDateRange
       lib/quickAdd.ts      zod schemas for quick add + receipts; lib/receiptImage.ts resizes photos
       server/              'server-only': parseExpenseText, parseReceiptImage call Claude
       components/          ExpenseForm, ExpenseList, QuickAddInput
-    analytics/             READ-ONLY AGGREGATION + CHARTS
-      types.ts, lib/stats.ts (calculateCategoryBreakdown, calculateVendorStats, calculateBudgetStreak)
-      components/          Dashboard, MonthlyInsights
+    analytics/             AGGREGATION, CHARTS, COACH
+      lib/stats.ts         all metrics (breakdowns, vendors, streak, suggestDailyBudget)
+      lib/coach.ts         buildCoachSummary + zod schemas; server/coachInsights.ts calls Claude
+      hooks/useDailyBudget.ts  daily budget in localStorage
+      components/          Dashboard, MonthlyInsights, BudgetCoach
     export/
-      lib/exportService.ts CSV / JSON / PDF (put new export work here)
-      lib/quickCsv.ts      legacy one-click CSV used by the header button; don't extend it
+      lib/exportService.ts CSV / JSON / PDF (new export work goes here)
+      lib/quickCsv.ts      legacy header-button CSV; don't extend it
       components/          ExportModal
     assistant/             CHAT AGENT: lib/ (tools.ts zod schemas, runTools.ts, protocol.ts),
       hooks/useAssistantChat.ts (tool loop), server/streamAssistantTurn.ts, components/
-  integrations/anthropic/  server-only Claude client, CLAUDE_MODEL ('claude-opus-5-5'), describeAnthropicError
+  integrations/anthropic/  server-only client, CLAUDE_MODEL ('claude-opus-5-5'), describeAnthropicError
   lib/utils.ts             SHARED, domain-free: formatCurrency, formatDate, generateId
 public/                    static assets
-docs/dev/, docs/user/      implementation docs and how-to guides (/document-feature)
+docs/dev/, docs/user/      dev docs and how-tos (/document-feature)
 ```
 **Import direction:** `app → assistant → analytics → export → expenses → lib`. Never import upward.
 - `lib/` and `integrations/` import no feature. A helper that needs `Expense` belongs in a feature.
@@ -69,8 +71,8 @@ docs/dev/, docs/user/      implementation docs and how-to guides (/document-feat
 
 ## 5. External systems
 - **Anthropic Claude API**, called from the server with `ANTHROPIC_API_KEY` in `.env.local` (gitignored). The key must never reach the browser.
-  - Both use server-side refusal fallbacks. Quick add/receipts: `beta.messages.parse`, zod schema, `effort: 'low'`.
-  - Text and photos go to Anthropic (the form says so); `sanitize` re-validates output.
+  - All use server-side refusal fallbacks. Quick add, receipts, coach: `beta.messages.parse`, zod schema, `effort: 'low'`.
+  - Text and photos go to Anthropic (the UI says so); `sanitize` re-validates output. The coach sends only aggregates.
   - Assistant: `beta.messages.stream`, `effort: 'medium'`. The browser keeps history, runs tools, loops (max 10 steps). Tool results go to Anthropic; the chat says so.
   - Claude never writes to storage: quick add prefills a form; the assistant's `propose_changes` shows a card the user approves.
 - **Exports** download via a Blob link. **Fonts** (`next/font/google`) load at build time.
@@ -79,19 +81,18 @@ docs/dev/, docs/user/      implementation docs and how-to guides (/document-feat
 ## 6. Build and deploy
 ```bash
 npm run dev        # http://localhost:3000
-npm run build      # production build; all routes static
+npm run build      # production build (pages static, API routes dynamic)
 npm start          # serve the build
 npm run lint       # must stay clean
-npx tsc --noEmit   # run after a build or dev run (LayoutProps types are generated in .next/)
+npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 ```
 - **No deploy setup** (no Dockerfile, CI, or config). Deploy with `next build` + `next start`; not a static export (API routes need a server).
 - **Before hosting publicly,** add auth or rate limiting to all `/api/*` routes. There's no login, so anyone could spend the API key.
-- **CI (if added):** `.github/workflows/`, running lint, tsc, build.
-- **Never commit `.next/`.**
+- **Never commit `.next/`.** CI (if added): `.github/workflows/` running lint, tsc, build.
 
 ## Rules the code depends on
-**Data layer (`useExpenses`)**
-- A module-level store read via `useSyncExternalStore`: one shared store; writes notify subscribers; the `storage` event syncs tabs.
+**Data layer:** only `useExpenses` and `useDailyBudget` touch `localStorage`. For `useExpenses`:
+- Module-level store via `useSyncExternalStore`: shared; writes notify subscribers; `storage` event syncs tabs.
   - `getSnapshot` must return a stable reference (cached on the raw string); never build a new array per read.
   - Server snapshot is `null` → `isLoading: true`; pages must render a loading state.
 - `getExpensesSnapshot()` reads the store outside React (assistant tools).
@@ -128,19 +129,19 @@ npx tsc --noEmit   # run after a build or dev run (LayoutProps types are generat
 
 ## UI conventions
 - **Styling:** Tailwind utilities inline; no CSS modules or component library.
-- **Page shell:** `min-h-screen bg-gray-50`; sticky white header with the 💸 logo linking to `/` and a "Back to Dashboard" link; content in `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`; copy the spinner loading state from an existing page.
+- **Page shell:** `min-h-screen bg-gray-50`; sticky white header with the 💸 logo (links to `/`) and "Back to Dashboard"; content in `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`; copy an existing page's spinner.
 - **Cards:** `bg-white rounded-lg shadow-sm p-6`; accent `from-blue-600 to-purple-600`.
-- **Empty states:** always handle both "no expenses" and "none in the selected range".
+- **Empty states:** handle both "no expenses" and "none in the selected range".
 - **Charts:** explicit-height container around `ResponsiveContainer`; tooltips use `formatCurrency`.
-- **Dark mode:** unsupported. No `dark:` variants, and don't add partial dark mode.
+- **Dark mode:** unsupported; no `dark:` variants.
 
 ## Git and workflow
 - **Branches:** `main` integrates; features go on `feature/<name>`, often in sibling worktrees (`docs/dev/worktrees.md`).
-- **Slash commands** (`.claude/commands/`): `/parallel-work` (set up worktrees), `/integrate-parallel-work` (merge them), `/document-feature <name>` (docs).
+- **Slash commands** (`.claude/commands/`): `/parallel-work`, `/integrate-parallel-work` (worktrees), `/document-feature <name>`.
 - **Commits:** imperative ("Implement Top Vendors analytics page"); merges "Merge feature/<name>: <summary>".
 - **When to commit or push:** only when asked.
 - **Don't commit** `*.work.txt`, `INTEGRATION-REPORT.md`, mockup PNGs.
-- **Moving files:** use `git mv`.
+- **Move files** via `git mv`.
 - **`AGENTS.md`:** `next dev` may rewrite it. Leave it intact; keep the `@AGENTS.md` import at the top.
 
 ## Definition of done
