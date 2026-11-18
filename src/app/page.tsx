@@ -7,6 +7,7 @@ import { exportToCSV } from '@/features/export/lib/quickCsv';
 import ExpenseForm from '@/features/expenses/components/ExpenseForm';
 import ExpenseList from '@/features/expenses/components/ExpenseList';
 import Dashboard from '@/features/analytics/components/Dashboard';
+import CleanupPanel from '@/features/assistant/components/CleanupPanel';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -204,11 +205,14 @@ export default function Home() {
         {activeTab === 'dashboard' && <Dashboard expenses={expenses} />}
 
         {activeTab === 'expenses' && (
-          <ExpenseList
-            expenses={expenses}
-            onEdit={handleEditExpense}
-            onDelete={deleteExpense}
-          />
+          <>
+            {expenses.length > 0 && <CleanupPanel />}
+            <ExpenseList
+              expenses={expenses}
+              onEdit={handleEditExpense}
+              onDelete={deleteExpense}
+            />
+          </>
         )}
 
         {activeTab === 'add' && (

@@ -32,6 +32,7 @@ export const QueryExpensesInput = z.object({
   max_amount: z.number().optional().describe('Only expenses of at most this many dollars'),
   sort: z.enum(['date_desc', 'date_asc', 'amount_desc']).optional().describe('Order of returned rows. Default date_desc.'),
   limit: z.number().int().min(1).max(100).optional().describe('Max rows to return (1-100). Default 50.'),
+  offset: z.number().int().min(0).optional().describe('Rows to skip, for paging through more than `limit` matches. Default 0.'),
 });
 
 export const SummarizeSpendingInput = z.object({
@@ -44,6 +45,20 @@ export const SummarizeSpendingInput = z.object({
 
 export const BudgetStreakInput = z.object({
   daily_budget: z.number().positive().describe('Daily spending limit in dollars'),
+});
+
+export const ListVendorsInput = z.object({
+  category: category.optional().describe('Only vendors with expenses in this category'),
+});
+
+export const FindDuplicatesInput = z.object({
+  max_days_apart: z
+    .number()
+    .int()
+    .min(0)
+    .max(31)
+    .optional()
+    .describe('How many days apart two identical charges can be and still count. Default 3.'),
 });
 
 export const ProposeChangesInput = z.object({
@@ -67,6 +82,8 @@ export const ProposeChangesInput = z.object({
 export type QueryExpensesInput = z.infer<typeof QueryExpensesInput>;
 export type SummarizeSpendingInput = z.infer<typeof SummarizeSpendingInput>;
 export type ProposeChangesInput = z.infer<typeof ProposeChangesInput>;
+export type ListVendorsInput = z.infer<typeof ListVendorsInput>;
+export type FindDuplicatesInput = z.infer<typeof FindDuplicatesInput>;
 
 export const ASSISTANT_TOOLS = {
   query_expenses: {
@@ -78,6 +95,16 @@ export const ASSISTANT_TOOLS = {
     schema: SummarizeSpendingInput,
     description:
       'Total spending grouped by category, vendor, month or weekday over an optional date range. Use it for breakdowns, rankings and comparisons instead of adding up rows yourself.',
+  },
+  list_vendors: {
+    schema: ListVendorsInput,
+    description:
+      'Every distinct vendor name (description) with its count, total, categories and date range, sorted so spelling variants ("CHIPOTLE #1234", "chipotle", "Chipotle") sit next to each other. Use it to find inconsistent vendor names and vendors filed under several categories.',
+  },
+  find_possible_duplicates: {
+    schema: FindDuplicatesInput,
+    description:
+      'Groups of expenses with the same amount and the same vendor (ignoring case, punctuation and store numbers) within a few days of each other. These may be one charge recorded twice, or a genuine repeat; judge from the dates and vendor.',
   },
   get_budget_streak: {
     schema: BudgetStreakInput,

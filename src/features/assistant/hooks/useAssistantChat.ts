@@ -153,14 +153,19 @@ export function useAssistantChat() {
     return results;
   }, []);
 
+  /**
+   * Send a user message. `instructions` are extra [App note]s sent with it but not shown in
+   * the chat (e.g. the clean-up task's detailed brief behind a short visible label).
+   */
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, instructions: string[] = []) => {
       const trimmed = text.trim();
       if (!trimmed || abortRef.current) return;
 
       const before = historyRef.current;
-      const notes = [...pendingNotesRef.current];
+      const notes = [...pendingNotesRef.current, ...instructions.map((note) => `${APP_NOTE_PREFIX} ${note}`)];
       if (before.length === 0) notes.unshift(introNote(getExpensesSnapshot(), new Date()));
+      const pendingNotes = pendingNotesRef.current;
       pendingNotesRef.current = [];
 
       const userMessage: MessageParam = {
@@ -187,7 +192,8 @@ export function useAssistantChat() {
           if (stopReason === 'refusal') {
             // Drop the whole exchange so the user can rephrase from a clean history.
             commit(before);
-            pendingNotesRef.current = notes.filter((note) => !note.startsWith(`${APP_NOTE_PREFIX} Today is`));
+            // Keep proposal outcomes for the next message; drop the intro (resent) and this message's instructions.
+            pendingNotesRef.current = [...pendingNotes];
             setError("Claude can't help with that request. Try rephrasing it.");
             return;
           }

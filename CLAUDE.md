@@ -14,13 +14,13 @@
 | `expenses/` (core) | Data model, categories, storage, add/edit/delete, search and filter, quick add from text or a receipt photo | `/` (Expenses, Add tabs) |
 | `analytics/` | Summary, pie chart, category/vendor rankings, monthly insights (donut, top 3, streak, daily budget, Claude coach) | `/` (Dashboard tab), `/top-categories`, `/top-vendors`, `/monthly-insights` |
 | `export/` | Quick CSV from the header; modal with CSV/JSON/PDF, filters, and preview | header button, Dashboard banner |
-| `assistant/` | "Ask your money" chat; Claude's tools run in the browser, edits are proposals the user approves | `/assistant` |
+| `assistant/` | "Ask your money" chat + one-click clean-up; tools run in the browser; edits are proposals the user approves | `/assistant`, Expenses tab |
 
 ## 3. Tech stack (`package.json`)
 - **Next.js 16.3.1** (Turbopack, `src/`). Newer than most training data: read `node_modules/next/dist/docs/` before using an unfamiliar API.
 - **React 19.2.** TypeScript 5 (`strict`); `@/*` maps to `./src/*`.
-- **Tailwind CSS v4** via `@tailwindcss/postcss`. No `tailwind.config.js`; tokens are in `globals.css` (`@theme inline`).
-- **Libraries:** Recharts 3, date-fns 4, jspdf + jspdf-autotable (browser PDF), `@anthropic-ai/sdk` (server; `import type` elsewhere), zod.
+- **Tailwind CSS v4** via `@tailwindcss/postcss`; no `tailwind.config.js`, tokens in `globals.css` (`@theme inline`).
+- **Libraries:** Recharts 3, date-fns 4, jspdf + autotable (browser PDF), `@anthropic-ai/sdk` (server; `import type` elsewhere), zod.
 - **Lint:** ESLint 9 flat config (next core-web-vitals + typescript). **Tests:** none installed.
 
 ## 4. Code organization
@@ -48,15 +48,15 @@ src/
       lib/exportService.ts CSV / JSON / PDF (new export work goes here)
       lib/quickCsv.ts      legacy header-button CSV; don't extend it
       components/          ExportModal
-    assistant/             CHAT AGENT: lib/ (tools.ts zod schemas, runTools.ts, protocol.ts),
-      hooks/useAssistantChat.ts (tool loop), server/streamAssistantTurn.ts, components/
+    assistant/             CHAT AGENT: lib/ (tools.ts zod schemas, runTools.ts, protocol.ts, cleanup.ts),
+      hooks/useAssistantChat.ts (tool loop), server/, components/ (AssistantTranscript is shared)
   integrations/anthropic/  server-only client, CLAUDE_MODEL ('claude-opus-5-5'), describeAnthropicError
   lib/utils.ts             SHARED, domain-free: formatCurrency, formatDate, generateId
 public/                    static assets
 docs/dev/, docs/user/      dev docs and how-tos (/document-feature)
 ```
 **Import direction:** `app → assistant → analytics → export → expenses → lib`. Never import upward.
-- `lib/` and `integrations/` import no feature. A helper that needs `Expense` belongs in a feature.
+- `lib/` and `integrations/` import no feature; a helper needing `Expense` belongs in a feature.
 - Only `server/` folders, `src/app/api/`, and `integrations/` may import `@/integrations/*` or the SDK. Mark those files `import 'server-only'`. Others may only `import type` from the SDK.
 - Import across features by full path. Don't add barrel `index.ts` files.
 
@@ -66,15 +66,15 @@ docs/dev/, docs/user/      dev docs and how-tos (/document-feature)
 - New screen:
   1. Create `src/app/<name>/page.tsx`.
   2. Put its UI in the right feature's `components/`.
-  3. In `src/app/page.tsx` add a desktop header link (`hidden sm:flex`) **and** a mobile floating button (`sm:hidden`).
+  3. In `src/app/page.tsx` add a desktop header link (`hidden sm:flex`) **and** mobile floating button (`sm:hidden`).
 - Pages hold no aggregation logic. `top-categories/page.tsx` still does; don't copy it, move it out when you touch it.
 
 ## 5. External systems
 - **Anthropic Claude API**, called from the server with `ANTHROPIC_API_KEY` in `.env.local` (gitignored). The key must never reach the browser.
   - All use server-side refusal fallbacks. Quick add, receipts, coach: `beta.messages.parse`, zod schema, `effort: 'low'`.
   - Text and photos go to Anthropic (the UI says so); `sanitize` re-validates output. The coach sends only aggregates.
-  - Assistant: `beta.messages.stream`, `effort: 'medium'`. The browser keeps history, runs tools, loops (max 10 steps). Tool results go to Anthropic; the chat says so.
-  - Claude never writes to storage: quick add prefills a form; the assistant's `propose_changes` shows a card the user approves.
+  - Assistant: `beta.messages.stream`, `effort: 'medium'`; the browser keeps history, runs tools, loops (max 10 steps). Tool results go to Anthropic (UI says so).
+  - Claude never writes to storage: quick add prefills a form; `propose_changes` shows a card the user approves.
 - **Exports** download via a Blob link. **Fonts** (`next/font/google`) load at build time.
 - **Adding one:** route in `src/app/api/<name>/`, client in `src/integrations/<name>/`, secrets in `.env.local`.
 
@@ -138,7 +138,7 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 ## Git and workflow
 - **Branches:** `main` integrates; features go on `feature/<name>`, often in sibling worktrees (`docs/dev/worktrees.md`).
 - **Slash commands** (`.claude/commands/`): `/parallel-work`, `/integrate-parallel-work` (worktrees), `/document-feature <name>`.
-- **Commits:** imperative ("Implement Top Vendors analytics page"); merges "Merge feature/<name>: <summary>".
+- **Commits:** imperative ("Implement Top Vendors page"); merges "Merge feature/<name>: <summary>".
 - **When to commit or push:** only when asked.
 - **Don't commit** `*.work.txt`, `INTEGRATION-REPORT.md`, mockup PNGs.
 - **Move files** via `git mv`.
