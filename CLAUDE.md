@@ -3,15 +3,15 @@
 # Expense Tracker — Project Guide
 
 ## 1. Application type
-- **Web app, mostly client-side:** a single-user expense tracker on Next.js (App Router).
+- **Web app, mostly client-side:** single-user expense tracker, Next.js App Router.
 - **Data:** browser `localStorage` only. No database, server actions, or auth.
-- **Server:** two routes call Claude: `POST /api/quick-add` (parses text) and `POST /api/assistant` (one chat turn). Neither stores data.
-- **Rendering:** every page is `'use client'`, prerendered as static HTML.
+- **Server:** POST routes call Claude: `/api/quick-add` (text), `/api/receipt` (photo), `/api/assistant` (chat turn). None store data.
+- **Rendering:** all pages are `'use client'`, prerendered static.
 
 ## 2. Main features (`src/features/`)
 | Feature | Does | Routes |
 |---|---|---|
-| `expenses/` (core) | Data model, categories, storage, add/edit/delete, search and filter, natural-language quick add | `/` (Expenses, Add tabs) |
+| `expenses/` (core) | Data model, categories, storage, add/edit/delete, search and filter, quick add from text or a receipt photo | `/` (Expenses, Add tabs) |
 | `analytics/` | Summary and pie chart, category/vendor rankings, monthly insights (donut, top 3, budget streak) | `/` (Dashboard tab), `/top-categories`, `/top-vendors`, `/monthly-insights` |
 | `export/` | Quick CSV from the header; modal with CSV/JSON/PDF, filters, and preview | header button, Dashboard banner |
 | `assistant/` | "Ask your money" chat; Claude's tools run in the browser, edits are proposals the user approves | `/assistant` |
@@ -27,17 +27,17 @@
 Feature-first: thin routes, logic in features, domain-free helpers in `lib/`.
 ```
 src/
-  app/                     ROUTES: one folder per URL; page.tsx composes feature components
+  app/                     ROUTES: a folder per URL; page.tsx composes features
     layout.tsx, globals.css, page.tsx ("/" tabs), top-categories/, top-vendors/, monthly-insights/, assistant/
-    api/quick-add/, api/assistant/  POST routes: validate input, call feature server code
+    api/quick-add/, api/receipt/, api/assistant/  validate input, call feature server code
   features/
     expenses/              CORE DOMAIN
       types.ts             Expense, ExpenseCategory, ExpenseFormData, DateRangeFilter
       constants.ts         EXPENSE_CATEGORIES, CATEGORY_COLORS, CATEGORY_ICONS, STORAGE_KEY
       hooks/useExpenses.ts the ONLY localStorage access + CRUD
       lib/filters.ts       getCurrentMonthExpenses, filterExpenses, filterExpensesByDateRange
-      lib/quickAdd.ts      zod request/response schemas for quick add (client imports types only)
-      server/              server-only code ('server-only'): parseExpenseText calls Claude
+      lib/quickAdd.ts      zod schemas for quick add + receipts; lib/receiptImage.ts resizes photos
+      server/              'server-only': parseExpenseText, parseReceiptImage call Claude
       components/          ExpenseForm, ExpenseList, QuickAddInput
     analytics/             READ-ONLY AGGREGATION + CHARTS
       types.ts, lib/stats.ts (calculateCategoryBreakdown, calculateVendorStats, calculateBudgetStreak)
@@ -50,7 +50,7 @@ src/
       hooks/useAssistantChat.ts (tool loop), server/streamAssistantTurn.ts, components/
   integrations/anthropic/  server-only Claude client, CLAUDE_MODEL ('claude-opus-5-5'), describeAnthropicError
   lib/utils.ts             SHARED, domain-free: formatCurrency, formatDate, generateId
-public/                    static assets (stays at the repo root)
+public/                    static assets
 docs/dev/, docs/user/      implementation docs and how-to guides (/document-feature)
 ```
 **Import direction:** `app → assistant → analytics → export → expenses → lib`. Never import upward.
@@ -69,8 +69,8 @@ docs/dev/, docs/user/      implementation docs and how-to guides (/document-feat
 
 ## 5. External systems
 - **Anthropic Claude API**, called from the server with `ANTHROPIC_API_KEY` in `.env.local` (gitignored). The key must never reach the browser.
-  - Both use server-side refusal fallbacks. Quick add: `beta.messages.parse`, zod output schema, `effort: 'low'`.
-  - Quick add's text goes to Anthropic (the form says so); `sanitize` re-validates Claude's output.
+  - Both use server-side refusal fallbacks. Quick add/receipts: `beta.messages.parse`, zod schema, `effort: 'low'`.
+  - Text and photos go to Anthropic (the form says so); `sanitize` re-validates output.
   - Assistant: `beta.messages.stream`, `effort: 'medium'`. The browser keeps history, runs tools, loops (max 10 steps). Tool results go to Anthropic; the chat says so.
   - Claude never writes to storage: quick add prefills a form; the assistant's `propose_changes` shows a card the user approves.
 - **Exports** download via a Blob link. **Fonts** (`next/font/google`) load at build time.
@@ -85,7 +85,7 @@ npm run lint       # must stay clean
 npx tsc --noEmit   # run after a build or dev run (LayoutProps types are generated in .next/)
 ```
 - **No deploy setup** (no Dockerfile, CI, or config). Deploy with `next build` + `next start`; not a static export (API routes need a server).
-- **Before hosting publicly,** add auth or rate limiting to both `/api/*` routes. There's no login, so anyone could spend the API key.
+- **Before hosting publicly,** add auth or rate limiting to all `/api/*` routes. There's no login, so anyone could spend the API key.
 - **CI (if added):** `.github/workflows/`, running lint, tsc, build.
 - **Never commit `.next/`.**
 
