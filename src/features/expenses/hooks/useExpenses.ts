@@ -72,6 +72,12 @@ function subscribe(listener: () => void) {
 
 const getServerSnapshot = () => null;
 
+/**
+ * Current expenses, read outside React (e.g. by assistant tools mid-conversation, which
+ * need the latest data rather than the value from the last render). Browser only.
+ */
+export const getExpensesSnapshot = readExpenses;
+
 const EMPTY: Expense[] = [];
 
 export function useExpenses() {

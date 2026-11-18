@@ -1,8 +1,8 @@
 import 'server-only';
-import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { format, isValid, parseISO } from 'date-fns';
 import { CLAUDE_MODEL, getAnthropicClient } from '@/integrations/anthropic/client';
+import { describeAnthropicError } from '@/integrations/anthropic/errors';
 import { EXPENSE_CATEGORIES } from '@/features/expenses/constants';
 import { ParsedExpense, ParsedExpenseSchema, isIsoDay } from '@/features/expenses/lib/quickAdd';
 
@@ -98,24 +98,6 @@ function sanitize(parsed: ParsedExpense, today: string): ParsedExpense {
 
 function toQuickAddError(error: unknown): QuickAddError {
   if (error instanceof QuickAddError) return error;
-  if (error instanceof Anthropic.AuthenticationError || error instanceof Anthropic.PermissionDeniedError) {
-    return new QuickAddError(500, 'Quick add is not configured: check ANTHROPIC_API_KEY on the server.');
-  }
-  if (error instanceof Anthropic.RateLimitError) {
-    return new QuickAddError(429, 'Too many requests right now. Please wait a moment and try again.');
-  }
-  if (error instanceof Anthropic.APIConnectionError) {
-    return new QuickAddError(503, "Couldn't reach Claude. Check your connection and try again.");
-  }
-  if (error instanceof Anthropic.APIError) {
-    console.error('Quick add API error:', error.status, error.message);
-    return new QuickAddError(502, 'Claude returned an error. Please try again.');
-  }
-  if (error instanceof Anthropic.AnthropicError) {
-    // Thrown when the client is created without credentials.
-    console.error('Quick add client error:', error.message);
-    return new QuickAddError(500, 'Quick add is not configured: set ANTHROPIC_API_KEY on the server.');
-  }
-  console.error('Quick add failed:', error);
-  return new QuickAddError(500, 'Quick add failed. Please try again.');
+  const { status, message } = describeAnthropicError(error, 'Quick add');
+  return new QuickAddError(status, message);
 }
