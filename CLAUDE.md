@@ -4,8 +4,8 @@
 
 ## 1. Application type
 - **Web app, mostly client-side:** single-user, Next.js App Router.
-- **Data:** browser `localStorage` only; no database. Optional password gate (`APP_PASSWORD`).
-- **Server:** POST routes call Claude: `/api/quick-add`, `/api/receipt`, `/api/coach`, `/api/assistant`. None store data.
+- **Data:** expenses in browser `localStorage`; no database. Optional `APP_PASSWORD` gate.
+- **Server:** routes call Claude (`/api/quick-add`, `receipt`, `coach`, `assistant`, `imports/*`) or banks (`/api/bank/*`); only bank connections are stored (`.data/`).
 - **Rendering:** all pages `'use client'`, prerendered static.
 
 ## 2. Main features (`src/features/`)
@@ -14,36 +14,35 @@
 | `expenses/` (core) | Data model, storage, CRUD, search/filter, quick add (text or receipt) | `/` (Expenses, Add tabs) |
 | `analytics/` | Summary, rankings, monthly insights (streak, daily budget, coach) | `/` (Dashboard tab), `/top-categories`, `/top-vendors`, `/monthly-insights` |
 | `export/` | Backup & restore (versioned JSON, reminder); CSV/JSON/PDF export modal | Dashboard panel, header |
+| `imports/` | Bank sync (sandbox provider) + statement upload (CSV/OFX/PDF) → shared pipeline → review → save | `/import` |
 | `assistant/` | Chat + one-click clean-up; browser-run tools; edits are approved proposals | `/assistant`, Expenses tab |
 
 ## 3. Tech stack (`package.json`)
 - **Next.js 16.4.6** (Turbopack). Newer than training data: read `node_modules/next/dist/docs/` before unfamiliar APIs.
 - **React 19.2**, TypeScript 5 `strict`, `@/*` → `./src/*`.
-- **Tailwind CSS v4** via `@tailwindcss/postcss`; no `tailwind.config.js`, tokens in `globals.css` (`@theme inline`).
+- **Tailwind CSS v4** (`@tailwindcss/postcss`); no config file, tokens in `globals.css`.
 - **Libraries:** Recharts 3, date-fns 4, jspdf, lucide-react, `@anthropic-ai/sdk` (server), zod.
-- **Lint:** ESLint 9 flat config (next core-web-vitals + typescript). **Tests:** none installed.
+- **Lint:** ESLint 9 (next core-web-vitals + typescript). **Tests:** none installed.
 
 ## 4. Code organization
 Feature-first: thin routes, logic in features, domain-free helpers in `lib/`.
 ```
 src/
   app/                     ROUTES: a folder per URL; page.tsx composes features
-    layout.tsx, globals.css, page.tsx ("/" tabs), top-categories/, top-vendors/, monthly-insights/, assistant/
-    api/<quick-add|receipt|coach|assistant>/  validate input, call feature server code
+    page.tsx ("/" tabs), top-categories/, top-vendors/, monthly-insights/, assistant/, import/, login/
+    api/*/route.ts         validate input, call feature server code
   features/
     expenses/              CORE DOMAIN
-      types.ts             Expense, ExpenseCategory, ExpenseFormData, DateRangeFilter
-      constants.ts         EXPENSE_CATEGORIES, CATEGORY_COLORS, CATEGORY_ICONS, STORAGE_KEY
+      types.ts, constants.ts  Expense, categories (colors, icons), STORAGE_KEY
       hooks/useExpenses.ts expense storage + CRUD
-      lib/filters.ts       getCurrentMonthExpenses, filterExpenses, filterExpensesByDateRange
-      lib/quickAdd.ts      zod schemas for quick add + receipts; lib/receiptImage.ts resizes photos
-      server/              'server-only': parseExpenseText, parseReceiptImage call Claude
+      lib/filters.ts       date/category/search filters
+      lib/quickAdd.ts, receiptImage.ts; server/parseExpenseText.ts (Claude)
       components/          ExpenseForm, ExpenseList, QuickAddInput
     analytics/             AGGREGATION, CHARTS, COACH
-      lib/stats.ts         all metrics (breakdowns, vendors, streak, suggestDailyBudget)
-      lib/coach.ts         buildCoachSummary + zod schemas; server/coachInsights.ts calls Claude
-      hooks/useDailyBudget.ts  daily budget in localStorage
+      lib/stats.ts (all metrics), lib/coach.ts + server/coachInsights.ts, hooks/useDailyBudget.ts
       components/          Dashboard, MonthlyInsights, BudgetCoach
+    imports/               BANK & STATEMENT IMPORT (docs/dev/bank-import.md): lib/pipeline.ts, statements.ts;
+                           server/bank/ (BankProvider, mock, connectionStore); components/ImportCenter
     export/
       lib/exportService.ts CSV / JSON / PDF; lib/backup.ts backup format + planRestore
       lib/quickCsv.ts      legacy header-button CSV; don't extend it
@@ -56,9 +55,9 @@ src/
 public/                    static assets
 docs/                      dev docs, how-tos
 ```
-**Import direction:** `app → assistant → analytics → export → expenses → lib`. Never import upward.
+**Import direction:** `app → assistant → analytics → export → imports → expenses → lib`. Never import upward.
 - `lib/` and `integrations/` import no feature; a helper needing `Expense` belongs in a feature.
-- Only `server/` folders, `src/app/api/`, and `integrations/` may import `@/integrations/*` or the SDK. Mark those files `import 'server-only'`. Others may only `import type` from the SDK.
+- Only `server/` folders, `src/app/api/` and `integrations/` import `@/integrations/*` or the SDK (`import 'server-only'`); others only `import type`.
 - Import across features by full path. Don't add barrel `index.ts` files.
 
 **Where new code goes:**
@@ -76,7 +75,7 @@ docs/                      dev docs, how-tos
   - Text, photos and tool results go to Anthropic (UI says so); the coach sends aggregates only. `sanitize` re-validates output.
   - Assistant: `beta.messages.stream`, `effort: 'medium'`; the browser keeps history, runs tools, loops (max 10).
   - Claude never writes to storage: quick add prefills a form; `propose_changes` shows a card the user approves.
-- **Exports** download via a Blob link. **Fonts** (`next/font/google`) load at build time.
+- **Banks:** `BANK_PROVIDER` (`mock` only so far). Tokens stay server-side in `.data/` (gitignored), encrypted with `BANK_TOKEN_KEY` (required for live providers).
 - **Adding one:** route in `src/app/api/<name>/`, client in `src/integrations/<name>/`, secrets in `.env.local`; Claude routes call `limitClaudeRequest`.
 
 ## 6. Build and deploy
@@ -93,30 +92,29 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 
 ## Rules the code depends on
 **Data layer:** only `useExpenses` and `createStoredValue` settings touch `localStorage`; restores use `importExpenses`. For `useExpenses`:
-- Module-level store via `useSyncExternalStore`: shared; writes notify subscribers; `storage` event syncs tabs.
+- Module-level `useSyncExternalStore` store; writes notify subscribers; `storage` event syncs tabs.
   - `getSnapshot` must return a stable reference (cached on the raw string); never build a new array per read.
   - Server snapshot is `null` → `isLoading: true`; pages must render a loading state.
-- `getExpensesSnapshot()` reads the store outside React (assistant tools).
+- `getExpensesSnapshot()` reads it outside React (assistant tools, imports).
 - Storage is written **only on mutations**, never on load (so corrupt data isn't overwritten). No "save on change" effect.
 
 **Data shape**
 - `Expense`: `id`, `date` (`yyyy-MM-dd`), `amount` (number, USD), `category`, `description`, `createdAt`/`updatedAt` (ISO).
-- **No storage schema version.** Renaming/retyping a field breaks stored data and backups: add optional fields, migrate in `readExpenses`, bump `BACKUP_VERSION`.
+- `STORAGE_SCHEMA_VERSION` (in `useExpenses`, written on mutation): renaming/retyping a field needs a `migrate()` step and a `BACKUP_VERSION` bump.
+- Imported expenses have `source` (kind, externalId, rawDescription…) for dedupe; keep it on edits.
 - `description` doubles as the vendor name.
 
 **Dates**
-- Use `parseISO(expense.date)`, never `new Date(expense.date)` (parses as UTC, shifts the day in western timezones).
-- Use date-fns for all date math.
+- `parseISO(expense.date)`, never `new Date(expense.date)` (UTC shifts the day). date-fns for date math.
 
 **Categories**
-- Closed union: `Food | Transportation | Entertainment | Shopping | Bills | Other`.
-- To add one, update `ExpenseCategory`, `EXPENSE_CATEGORIES`, `CATEGORY_COLORS`, `CATEGORY_ICONS` (tsc flags misses).
+- Closed union: `Food | Transportation | Entertainment | Shopping | Bills | Other`. Adding one: update `ExpenseCategory`, `EXPENSE_CATEGORIES`, `CATEGORY_COLORS`, `CATEGORY_ICONS` (tsc flags misses).
 - Never hard-code category colors (a validated dark palette) or icons.
 
 **Reuse**
 - Money uses `formatCurrency`; never `toFixed` in UI text.
 - Check `filters.ts` and `stats.ts` before writing a helper.
-- Known duplication, don't add more: `top-categories` date filtering; two CSV exporters.
+- Known duplication (don't add): `top-categories` date filter; two CSV exporters.
 
 **Validation (`ExpenseForm`)**
 - Date required; amount > 0 matching `/^\d+\.?\d{0,2}$/`; description required.
@@ -129,8 +127,8 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 - Never call setState from an effect to mirror props.
 
 ## UI conventions
-- **Theme:** dark only, black + teal. Use `globals.css` tokens (`bg-canvas`/`panel`, `border-line`, `text-ink*`, `bg-accent` + `text-accent-ink`), never raw grays/blues. Inline Tailwind only.
-- **Page shell:** `min-h-screen bg-canvas`, `<AppHeader />` (`app/_components/`), content `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`, an existing page's spinner.
+- **Theme:** dark, black + teal. Use `globals.css` tokens (`bg-canvas`/`panel`, `border-line`, `text-ink*`, `bg-accent`), not raw grays/blues.
+- **Page shell:** `min-h-screen bg-canvas`, `<AppHeader />`, `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`, a page's spinner.
 - **Cards:** `bg-panel border border-line rounded-lg p-6`, no shadows/gradients. Primary buttons: teal, `rounded-full`.
 - **Empty states:** handle both "no expenses" and "none in the selected range".
 - **Icons:** from `lib/icons.tsx` (themed lucide), never lucide directly or emoji; categories: `<CategoryIcon>`.

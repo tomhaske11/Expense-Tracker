@@ -24,9 +24,11 @@ export function describeAnthropicError(error: unknown, feature: string): { statu
     return { status: 502, message: 'Claude returned an error. Please try again.' };
   }
   if (error instanceof Anthropic.AnthropicError) {
-    // Thrown when the client is created without credentials.
     console.error(`${feature} client error:`, error.message);
-    return { status: 500, message: `${feature} is not configured: set ANTHROPIC_API_KEY on the server.` };
+    // Thrown when the client is created without credentials, or for client-side request problems.
+    return /api.?key|auth|credential/i.test(error.message)
+      ? { status: 500, message: `${feature} is not configured: set ANTHROPIC_API_KEY on the server.` }
+      : { status: 500, message: `${feature} failed. Please try again.` };
   }
   console.error(`${feature} failed:`, error);
   return { status: 500, message: `${feature} failed. Please try again.` };

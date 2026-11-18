@@ -11,7 +11,7 @@ import CleanupPanel from '@/features/assistant/components/CleanupPanel';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AppHeader from '@/app/_components/AppHeader';
-import { ChatIcon, DashboardIcon, DownloadIcon, EditIcon, ListIcon, PieIcon, PlusIcon, StoreIcon } from '@/lib/icons';
+import { BankIcon, ChatIcon, DashboardIcon, DownloadIcon, EditIcon, ListIcon, PieIcon, PlusIcon, StoreIcon } from '@/lib/icons';
 
 type Tab = 'dashboard' | 'expenses' | 'add' | 'vendors';
 
@@ -89,6 +89,9 @@ export default function Home() {
             </TabButton>
             <TabButton active={activeTab === 'vendors'} onClick={() => router.push('/top-vendors')} icon={<StoreIcon />}>
               Vendors
+            </TabButton>
+            <TabButton active={false} onClick={() => router.push('/import')} icon={<BankIcon />}>
+              Import
             </TabButton>
           </nav>
         }

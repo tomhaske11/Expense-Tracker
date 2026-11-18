@@ -45,3 +45,6 @@ next-env.d.ts
 INTEGRATION-REPORT.md
 # design mockups kept locally (never commit)
 /*.png
+
+# server-side data (bank connections)
+/.data/

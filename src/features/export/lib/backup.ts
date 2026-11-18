@@ -46,6 +46,15 @@ const RawExpense = z.looseObject({
   description: z.unknown(),
   createdAt: z.unknown().optional(),
   updatedAt: z.unknown().optional(),
+  source: z.unknown().optional(),
+});
+
+const SourceSchema = z.object({
+  kind: z.enum(['file', 'bank']),
+  externalId: z.string().min(1).max(200),
+  connectionId: z.string().max(200).optional(),
+  accountId: z.string().max(200).optional(),
+  rawDescription: z.string().max(300).optional(),
 });
 
 export interface RestorePlan {
@@ -90,6 +99,7 @@ function readRecord(raw: unknown, nowIso: string): { expense: Expense; recategor
 
   const known = EXPENSE_CATEGORIES.includes(r.category as ExpenseCategory);
   const createdAt = isIsoTimestamp(r.createdAt) ? r.createdAt : nowIso;
+  const source = SourceSchema.safeParse(r.source);
   return {
     expense: {
       id: typeof r.id === 'string' && r.id.trim() ? r.id : generateId(),
@@ -99,6 +109,7 @@ function readRecord(raw: unknown, nowIso: string): { expense: Expense; recategor
       description: r.description.trim().slice(0, 200),
       createdAt,
       updatedAt: isIsoTimestamp(r.updatedAt) ? r.updatedAt : createdAt,
+      ...(source.success && { source: source.data }),
     },
     recategorized: !known,
   };

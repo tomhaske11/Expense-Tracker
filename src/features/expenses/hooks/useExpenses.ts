@@ -16,6 +16,28 @@ import { generateId } from '@/lib/utils';
 
 const listeners = new Set<() => void>();
 
+/**
+ * Version of the stored data shape, saved alongside it on every write (never on load).
+ * v1: original shape (no version key). v2: optional `source` on imported expenses.
+ * When a change needs data rewritten, bump this and add a step to migrate().
+ */
+export const STORAGE_SCHEMA_VERSION = 2;
+const VERSION_KEY = 'expense-tracker-schema-version';
+
+function storedVersion(): number {
+  const value = Number(localStorage.getItem(VERSION_KEY) ?? 1);
+  return Number.isInteger(value) && value > 0 ? value : 1;
+}
+
+/** Bring stored expenses up to the current shape. The result is saved on the next write. */
+function migrate(expenses: Expense[], fromVersion: number): Expense[] {
+  if (fromVersion > STORAGE_SCHEMA_VERSION) {
+    console.warn(`Stored expenses are schema v${fromVersion}, newer than this app (v${STORAGE_SCHEMA_VERSION}).`);
+  }
+  // v1 -> v2: `source` is optional, so existing records need no change.
+  return expenses;
+}
+
 // Cache keyed on the raw string so getSnapshot returns a stable reference
 // until the stored value actually changes.
 let cachedRaw: string | null | undefined;
@@ -33,7 +55,7 @@ function readExpenses(): Expense[] {
   if (raw !== cachedRaw) {
     cachedRaw = raw;
     try {
-      cachedExpenses = raw ? (JSON.parse(raw) as Expense[]) : [];
+      cachedExpenses = raw ? migrate(JSON.parse(raw) as Expense[], storedVersion()) : [];
     } catch (error) {
       // Corrupt data is left in storage untouched; it is only replaced on the next write.
       console.error('Failed to parse stored expenses:', error);
@@ -48,6 +70,7 @@ function writeExpenses(update: (prev: Expense[]) => Expense[]) {
   try {
     const raw = JSON.stringify(next);
     localStorage.setItem(STORAGE_KEY, raw);
+    localStorage.setItem(VERSION_KEY, String(STORAGE_SCHEMA_VERSION));
     cachedRaw = raw;
   } catch (error) {
     // Storage is unavailable or full: keep the change in memory for this session.
