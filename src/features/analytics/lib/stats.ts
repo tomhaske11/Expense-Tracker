@@ -101,3 +101,32 @@ export function calculateBudgetStreak(expenses: Expense[], dailyBudget: number, 
   }
   return streak;
 }
+
+/** Spending per calendar month (yyyy-MM), oldest first. Months with no expenses are omitted. */
+export function calculateMonthlyTotals(expenses: Expense[]): { month: string; total: number; count: number }[] {
+  const totals = new Map<string, { total: number; count: number }>();
+  for (const expense of expenses) {
+    const month = format(parseISO(expense.date), 'yyyy-MM');
+    const entry = totals.get(month) ?? { total: 0, count: 0 };
+    entry.total += expense.amount;
+    entry.count++;
+    totals.set(month, entry);
+  }
+  return [...totals.entries()]
+    .map(([month, entry]) => ({ month, ...entry }))
+    .sort((a, b) => a.month.localeCompare(b.month));
+}
+
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+/** Spending per day of the week, Monday first. Every weekday is included, even with no spending. */
+export function calculateWeekdayTotals(expenses: Expense[]): { weekday: string; total: number; count: number }[] {
+  const totals = WEEKDAYS.map((weekday) => ({ weekday, total: 0, count: 0 }));
+  for (const expense of expenses) {
+    // date-fns 'i' is the ISO day of week: 1 = Monday … 7 = Sunday.
+    const entry = totals[Number(format(parseISO(expense.date), 'i')) - 1];
+    entry.total += expense.amount;
+    entry.count++;
+  }
+  return totals;
+}
