@@ -3,150 +3,172 @@
 # expenseAI — Project Guide
 
 ## 1. Application type
-- **Web app, mostly client-side:** single-user, Next.js App Router.
-- **Data:** expenses in browser `localStorage`; no database. Optional `APP_PASSWORD` gate.
-- **Server:** routes call Claude (`/api/quick-add`, `receipt`, `coach`, `assistant`, `imports/*`) or banks (`/api/bank/*`); only bank connections are stored (`.data/`).
-- **Rendering:** all pages `'use client'`, prerendered static.
+- **Multi-user web app** on Next.js (App Router), heading for an iPhone app via Capacitor.
+- **Accounts and data:** Supabase. Users sign in with Supabase Auth; expenses, settings and bank connections live in Postgres. The browser queries Supabase directly, and row-level security (RLS) limits every query to the signed-in user's rows. Setup and schema: `docs/dev/accounts.md`.
+- **Server:** API routes call Claude (`/api/quick-add`, `receipt`, `coach`, `assistant`, `imports/*`), the bank provider (`/api/bank/*`) or Supabase admin (`/api/account`).
+- **Rendering:** all pages are `'use client'` and prerendered static, which suits bundling them into the native app.
 
 ## 2. Main features (`src/features/`)
 | Feature | Does | Routes |
 |---|---|---|
-| `expenses/` (core) | Data model, storage, CRUD, search/filter, quick add (text or receipt) | `/` (Expenses, Add tabs) |
-| `analytics/` | Summary, rankings, monthly insights (streak, daily budget, coach) | `/` (Dashboard tab), `/top-categories`, `/top-vendors`, `/monthly-insights` |
-| `export/` | Backup & restore (versioned JSON, reminder); CSV/JSON/PDF export modal | Dashboard panel, header |
-| `imports/` | Bank sync (sandbox provider) + statement upload (CSV/OFX/PDF) → shared pipeline → review → save | `/import` |
-| `assistant/` | Chat + one-click clean-up; browser-run tools; edits are approved proposals | `/assistant`, Expenses tab |
+| `expenses/` (core) | Data model, the Supabase-backed store, CRUD, search/filter, quick add (text or receipt photo) | `/` (Expenses, Add tabs) |
+| `analytics/` | Summary and pie chart, category/vendor rankings, monthly insights (streak, daily budget, Claude coach) | `/` (Dashboard), `/top-categories`, `/top-vendors`, `/monthly-insights` |
+| `export/` | Backup download and restore (versioned JSON), CSV/JSON/PDF export modal, one-time import of pre-accounts browser data | Dashboard panels, header |
+| `imports/` | Bank sync (sandbox provider today) and statement upload (CSV/OFX/PDF) → shared pipeline → review → save | `/import` |
+| `assistant/` | "Ask your money" chat and one-click clean-up; tools run in the browser; edits are proposals the user approves | `/assistant`, Expenses tab |
+
+Account pages live in `src/app`: `/login`, `/signup`, `/forgot-password`, `/auth/confirm` (email-link route), `/account` (sign out, change password, delete account), `/account/password`.
 
 ## 3. Tech stack (`package.json`)
-- **Next.js 16.4.6** (Turbopack). Newer than training data: read `node_modules/next/dist/docs/` before unfamiliar APIs.
-- **React 19.2**, TypeScript 5 `strict`, `@/*` → `./src/*`.
-- **Tailwind CSS v4** (`@tailwindcss/postcss`); no config file, tokens in `globals.css`.
-- **Libraries:** Recharts 3, date-fns 4, jspdf, lucide-react, `@anthropic-ai/sdk` (server), zod.
-- **Lint:** ESLint 9 (next core-web-vitals + typescript). **Tests:** none installed.
+- **Next.js 16.4.6** (Turbopack, `src/`). This is newer than most training data: read `node_modules/next/dist/docs/` before using an unfamiliar API. Middleware is `src/proxy.ts`.
+- **React 19.2.** TypeScript 5 (`strict`); `@/*` maps to `./src/*`.
+- **Tailwind CSS v4** via `@tailwindcss/postcss`. No `tailwind.config.js`; theme tokens are in `src/app/globals.css`.
+- **Libraries:** Recharts 3, date-fns 4, jspdf + jspdf-autotable (PDF in the browser), lucide-react (icons, via `lib/icons.tsx`), `@supabase/supabase-js` + `@supabase/ssr`, `@anthropic-ai/sdk` (server only), zod.
+- **Lint:** ESLint 9 flat config (next core-web-vitals + typescript).
+- **Tests:** no test framework is installed yet. End-to-end checks so far were ad-hoc scripts outside the repo; adding Vitest + Playwright is a planned next step.
 
 ## 4. Code organization
-Feature-first: thin routes, logic in features, domain-free helpers in `lib/`.
+Feature-first: routes are thin, logic lives in features, and domain-free helpers live in `lib/`.
 ```
 src/
-  app/                     ROUTES: a folder per URL; page.tsx composes features
-    page.tsx ("/" tabs), top-categories/, top-vendors/, monthly-insights/, assistant/, import/, login/
+  app/                     ROUTES: one folder per URL; page.tsx composes feature components
+    page.tsx ("/" tabs), top-categories/, top-vendors/, monthly-insights/, assistant/, import/
+    login/, signup/, forgot-password/, auth/confirm/route.ts, account/
     api/*/route.ts         validate input, call feature server code
+    _components/           AppHeader (brand, account link, sync-error banner), Brand, AuthCard
   features/
     expenses/              CORE DOMAIN
-      types.ts, constants.ts  Expense, categories (colors, icons), STORAGE_KEY
-      hooks/useExpenses.ts expense storage + CRUD
+      types.ts, constants.ts  Expense (+ source), categories (colors, icons)
+      hooks/useExpenses.ts the Supabase-backed expense store + CRUD (see Rules)
       lib/filters.ts       date/category/search filters
-      lib/quickAdd.ts, receiptImage.ts; server/parseExpenseText.ts (Claude)
-      components/          ExpenseForm, ExpenseList, QuickAddInput
+      lib/quickAdd.ts, lib/receiptImage.ts; server/parseExpenseText.ts (Claude)
+      components/          ExpenseForm, ExpenseList, QuickAddInput, CategoryIcon
     analytics/             AGGREGATION, CHARTS, COACH
-      lib/stats.ts (all metrics), lib/coach.ts + server/coachInsights.ts, hooks/useDailyBudget.ts
+      lib/stats.ts         all metrics; lib/coach.ts + server/coachInsights.ts (Claude)
+      hooks/useDailyBudget.ts  daily budget in user_settings
       components/          Dashboard, MonthlyInsights, BudgetCoach
-    imports/               BANK & STATEMENT IMPORT (docs/dev/bank-import.md): lib/pipeline.ts, statements.ts;
-                           server/bank/ (BankProvider, mock, connectionStore); components/ImportCenter
     export/
       lib/exportService.ts CSV / JSON / PDF; lib/backup.ts backup format + planRestore
       lib/quickCsv.ts      legacy header-button CSV; don't extend it
-      components/          ExportModal
-    assistant/             CHAT AGENT: lib/ (tools.ts zod schemas, runTools.ts, protocol.ts, cleanup.ts),
-      hooks/useAssistantChat.ts (tool loop), server/, components/ (AssistantTranscript is shared)
-  integrations/anthropic/  server-only client, CLAUDE_MODEL ('claude-opus-5-5'), describeAnthropicError
-  lib/                     SHARED, domain-free: utils, storedValue; server-only session, rateLimit
-  proxy.ts                 if APP_PASSWORD: pages → /login, /api/* → 401
+      components/          ExportModal, BackupPanel, LocalDataImport
+    imports/               BANK & STATEMENT IMPORT (docs/dev/bank-import.md)
+      lib/pipeline.ts, statements.ts, protocol.ts; server/bank/ (BankProvider, mock, connectionStore)
+      components/          ImportCenter, ImportReview
+    assistant/             CHAT AGENT: lib/ (tools, runTools, protocol, cleanup), hooks/useAssistantChat.ts (tool loop),
+                           server/streamAssistantTurn.ts, components/ (AssistantChat, AssistantTranscript, ProposalCard, CleanupPanel)
+  integrations/
+    anthropic/             server-only Claude client, CLAUDE_MODEL ('claude-opus-5-5'), describeAnthropicError
+    supabase/              env.ts, browser.ts (browser client), server.ts (requireUser, admin client)
+  lib/                     SHARED, domain-free: utils.ts, icons.tsx, chartTheme.ts; server-only rateLimit.ts
+  proxy.ts                 Supabase session refresh + gate: pages → /login, /api/* → 401
+supabase/migrations/       SQL schema (tables, RLS, grants, realtime)
 public/                    static assets
-docs/                      dev docs, how-tos
+docs/dev/, docs/user/      implementation docs (accounts, bank import, ...) and how-to guides
 ```
 **Import direction:** `app → assistant → analytics → export → imports → expenses → lib`. Never import upward.
-- `lib/` and `integrations/` import no feature; a helper needing `Expense` belongs in a feature.
-- Only `server/` folders, `src/app/api/` and `integrations/` import `@/integrations/*` or the SDK (`import 'server-only'`); others only `import type`.
+- `lib/` and `integrations/` import no feature. A helper that needs `Expense` belongs in a feature.
+- `integrations/anthropic`, `getSupabaseAdmin()` and the bank layer are server-only (`import 'server-only'`); only `server/` folders and `src/app/api/` use them. Client code may only `import type` from the Anthropic SDK.
+- The Supabase **browser** client (`integrations/supabase/browser.ts`) is used by the data-layer hooks (`useExpenses`, `useDailyBudget`) and the account pages. Don't query Supabase from other components; add to a hook instead.
 - Import across features by full path. Don't add barrel `index.ts` files.
 
 **Where new code goes:**
 - New metric: `analytics/lib/stats.ts`
 - New filter: `expenses/lib/filters.ts`
+- New table or column: a new file in `supabase/migrations/` (never edit an applied one) with RLS policies and grants, then the matching row mapping in the hook.
 - New screen:
   1. Create `src/app/<name>/page.tsx`.
   2. Put its UI in the right feature's `components/`.
-  3. In `src/app/page.tsx` add a desktop header link (`hidden sm:flex`) **and** mobile floating button (`sm:hidden`).
-- Pages hold no aggregation logic (`top-categories/page.tsx` still does; move it out when you touch it).
+  3. Add entry points in `src/app/page.tsx`: a desktop header link (`hidden sm:flex`) **and** a mobile floating button (`sm:hidden`), or a tab like Vendors and Import.
+- Pages should not hold aggregation logic. `top-categories/page.tsx` still does, so don't copy it; move logic out when you touch it.
 
 ## 5. External systems
-- **Anthropic Claude API** from the server, `ANTHROPIC_API_KEY` in `.env.local`. The key never reaches the browser.
-  - All use refusal fallbacks. Quick add, receipts, coach: `beta.messages.parse` + zod, `effort: 'low'`.
-  - Text, photos and tool results go to Anthropic (UI says so); the coach sends aggregates only. `sanitize` re-validates output.
-  - Assistant: `beta.messages.stream`, `effort: 'medium'`; the browser keeps history, runs tools, loops (max 10).
-  - Claude never writes to storage: quick add prefills a form; `propose_changes` shows a card the user approves.
-- **Banks:** `BANK_PROVIDER` (`mock` only so far). Tokens stay server-side in `.data/` (gitignored), encrypted with `BANK_TOKEN_KEY` (required for live providers).
-- **Adding one:** route in `src/app/api/<name>/`, client in `src/integrations/<name>/`, secrets in `.env.local`; Claude routes call `limitClaudeRequest`.
+- **Supabase** (Auth + Postgres). Env: `NEXT_PUBLIC_SUPABASE_URL` (bare project URL, no `/rest/v1`), `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (browser-safe), `SUPABASE_SECRET_KEY` (server only; bypasses RLS). See `.env.example` and `docs/dev/accounts.md`.
+  - Clients pin `db: { schema: 'public' }` because the project's default exposed schema may differ.
+  - Every API route starts with `requireUser(request)`, which accepts the session cookie (web) or `Authorization: Bearer <access token>` (native app).
+  - `getSupabaseAdmin()` bypasses RLS: use it only for server-only tables and admin actions, always filtered by the verified user id.
+- **Anthropic Claude API**, called from the server with `ANTHROPIC_API_KEY`. The key must never reach the browser.
+  - All calls use server-side refusal fallbacks. Quick add, receipts, coach and imports: `beta.messages.parse` with a zod schema, `effort: 'low'`. Assistant: `beta.messages.stream`, `effort: 'medium'`; the browser keeps the history, runs the tools and loops (max 10 steps).
+  - User text, photos, assistant tool results and import descriptions are sent to Anthropic; the UI says so in each place. The coach sends aggregates only. Server code re-validates Claude's output (`sanitize`).
+  - Claude never writes data directly: quick add prefills a form; `propose_changes` shows a card the user approves; imports are reviewed before saving.
+  - Claude routes call `limitClaudeRequest(request, user.id)` (per-user limits, in memory: move to Redis before scaling to multiple instances).
+- **Banks:** `BANK_PROVIDER` (`mock` only so far). Tokens are stored server-side in `bank_connections`, encrypted with `BANK_TOKEN_KEY` (required for live providers). Details: `docs/dev/bank-import.md`.
+- **Exports** download through a Blob link. **Fonts** (`next/font/google`) are fetched at build time.
 
 ## 6. Build and deploy
 ```bash
-npm run dev        # http://localhost:3000
+npm run dev        # http://localhost:3000 (restart after changing .env.local)
 npm run build      # production build (pages static, API routes dynamic)
 npm start          # serve the build
 npm run lint       # must stay clean
-npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
+npx tsc --noEmit   # run after a build or dev run (route types are generated in .next/)
 ```
-- **No deploy setup** (no Dockerfile/CI). Deploy with `next build` + `next start` (API routes need a server).
-- **Before hosting publicly,** set `APP_PASSWORD`. Rate limits are in memory (`LIMITS`): run one process.
-- **Never commit `.next/`.** CI (if added): `.github/workflows/` running lint, tsc, build.
+- **Target:** Vercel (app) + Supabase. Set the env vars from `.env.example` in Vercel, and add the deployed origin to Supabase Auth's Site URL and Redirect URLs.
+- **If you add CI,** use `.github/workflows/` and run lint, tsc, build (and tests once they exist).
+- **Never commit `.next/`, `.env.local` or `.data/`.**
 
 ## Rules the code depends on
-**Data layer:** only `useExpenses` and `createStoredValue` settings touch `localStorage`; restores use `importExpenses`. For `useExpenses`:
-- Module-level `useSyncExternalStore` store; writes notify subscribers; `storage` event syncs tabs.
-  - `getSnapshot` must return a stable reference (cached on the raw string); never build a new array per read.
-  - Server snapshot is `null` → `isLoading: true`; pages must render a loading state.
-- `getExpensesSnapshot()` reads it outside React (assistant tools, imports).
-- Storage is written **only on mutations**, never on load (so corrupt data isn't overwritten). No "save on change" effect.
+**Data layer (`useExpenses`)**
+- A module-level store read through `useSyncExternalStore`, shared by every caller.
+  - It loads on the first subscriber; the snapshot is `null` (→ `isLoading: true`) until then. Pages must render a loading state while it's true.
+  - `getSnapshot` must return a stable reference; only replace the array when data changes.
+  - Mutations are optimistic: update the cache, persist in the background, and on failure roll back and set `syncError` (shown by `SyncErrorBanner` in the header). Keep that pattern for new mutations.
+  - Realtime changes for the user's rows trigger a refetch, deferred while the user's own writes are in flight. Signing out (or another user signing in) clears the cache.
+- `getExpensesSnapshot()` reads the cache outside React (assistant tools, imports).
+- `importExpenses(records, 'merge' | 'replace')` is the bulk path (restores, imports, local-data import).
+- Pre-accounts data in `localStorage` is only read for the one-time import offer (`readLocalExpenses`) and is never modified or deleted.
 
 **Data shape**
-- `Expense`: `id`, `date` (`yyyy-MM-dd`), `amount` (number, USD), `category`, `description`, `createdAt`/`updatedAt` (ISO).
-- `STORAGE_SCHEMA_VERSION` (in `useExpenses`, written on mutation): renaming/retyping a field needs a `migrate()` step and a `BACKUP_VERSION` bump.
-- Imported expenses have `source` (kind, externalId, rawDescription…) for dedupe; keep it on edits.
+- `Expense` fields: `id` (client-generated), `date` (`yyyy-MM-dd`), `amount` (number, USD), `category`, `description`, `createdAt` / `updatedAt` (ISO), optional `source` (`kind`, `externalId`, `connectionId`, `accountId`, `rawDescription`) on imported expenses. Keep `source` on edits; it's what stops re-imports.
+- Database columns are snake_case (`created_at`, `user_id`); the hook maps them. `amount` is `numeric(12,2)`; convert with `Number()`.
+- Changing the shape needs a new migration and a `BACKUP_VERSION` bump in `export/lib/backup.ts`.
 - `description` doubles as the vendor name.
 
 **Dates**
-- `parseISO(expense.date)`, never `new Date(expense.date)` (UTC shifts the day). date-fns for date math.
+- Use `parseISO(expense.date)`, never `new Date(expense.date)`. The latter parses as UTC and shifts the day in western timezones.
+- Use date-fns for all date math.
 
 **Categories**
-- Closed union: `Food | Transportation | Entertainment | Shopping | Bills | Other`. Adding one: update `ExpenseCategory`, `EXPENSE_CATEGORIES`, `CATEGORY_COLORS`, `CATEGORY_ICONS` (tsc flags misses).
-- Never hard-code category colors (a validated dark palette) or icons.
+- Closed union: `Food | Transportation | Entertainment | Shopping | Bills | Other`. The database has the same check constraint.
+- To add one, update `ExpenseCategory`, `EXPENSE_CATEGORIES`, `CATEGORY_COLORS`, `CATEGORY_ICONS` (tsc flags misses), and add a migration that updates the `expenses.category` check.
+- Never hard-code category colors (a palette validated for the dark surface) or icons.
 
 **Reuse**
 - Money uses `formatCurrency`; never `toFixed` in UI text.
 - Check `filters.ts` and `stats.ts` before writing a helper.
-- Known duplication (don't add): `top-categories` date filter; two CSV exporters.
+- Known duplication; don't add more: `top-categories` has its own date filtering; there are two CSV exporters.
 
 **Validation (`ExpenseForm`)**
 - Date required; amount > 0 matching `/^\d+\.?\d{0,2}$/`; description required.
-- Future dates: blocked by the input's `max`; quick add clamps to today.
+- Future dates are blocked by the date input's `max`; quick add clamps them to today.
 - The parent resets the form by changing its `key`.
 
 **Lint**
 - No `any` and no `eslint-disable`.
 - For Recharts callbacks, use `PieLabelRenderProps` / `TooltipContentProps`.
-- Never call setState from an effect to mirror props.
+- Never call setState from an effect to mirror props. Fetching in an effect is fine if state is set in the promise callback.
+- Don't call impure functions like `Date.now()` during render; do it in effects or handlers.
 
 ## UI conventions
-- **Theme:** dark, black + teal. Use `globals.css` tokens (`bg-canvas`/`panel`, `border-line`, `text-ink*`, `bg-accent`), not raw grays/blues.
-- **Page shell:** `min-h-screen bg-canvas`, `<AppHeader />`, `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`, a page's spinner.
-- **Cards:** `bg-panel border border-line rounded-lg p-6`, no shadows/gradients. Primary buttons: teal, `rounded-full`.
-- **Empty states:** handle both "no expenses" and "none in the selected range".
-- **Icons:** from `lib/icons.tsx` (themed lucide), never lucide directly or emoji; categories: `<CategoryIcon>`.
-- **Charts:** fixed-height wrapper around `ResponsiveContainer`, `lib/chartTheme.ts` colors, `formatCurrency` tooltips.
-- **No light theme:** no `dark:` variants.
+- **Theme:** dark only, black + teal. Use the tokens in `globals.css` (`bg-canvas`, `bg-panel`, `bg-panel-raised`, `border-line`, `text-ink` / `-soft` / `-muted` / `-faint`, `bg-accent` + `text-accent-ink`), never raw grays or blues. Inline Tailwind; no CSS modules or component library. No `dark:` variants and no light theme.
+- **Page shell:** `min-h-screen bg-canvas`, `<AppHeader />`, content in `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`. Copy the spinner loading state from an existing page. Auth pages use `AuthCard`.
+- **Cards:** `bg-panel border border-line rounded-lg p-6`, no shadows or gradients. Primary buttons are teal and `rounded-full`.
+- **Empty states:** always handle both "no expenses" and "none in the selected range".
+- **Icons:** import from `lib/icons.tsx` (themed lucide), never from lucide directly, and no emoji. Category icons via `<CategoryIcon>`.
+- **Charts:** an explicit-height container around `ResponsiveContainer`; colors from `lib/chartTheme.ts`; tooltips use `formatCurrency`.
 
 ## Git and workflow
-- **Branches:** `main` integrates; features on `feature/<name>`, often in worktrees (`docs/dev/worktrees.md`).
-- **Slash commands:** `/parallel-work`, `/integrate-parallel-work`, `/document-feature <name>`.
-- **Commits:** imperative ("Implement Top Vendors page"); merges "Merge feature/<name>: <summary>".
+- **Branches:** `main` is the integration branch. Features go on `feature/<name>` branches, sometimes in sibling worktrees; see `docs/dev/worktrees.md`.
+- **Slash commands** (`.claude/commands/`): `/parallel-work` sets up worktrees, `/integrate-parallel-work` merges them, `/document-feature <name>` generates docs.
+- **Commit messages:** imperative ("Implement Top Vendors analytics page"). Merges: "Merge feature/<name>: <summary>".
 - **When to commit or push:** only when asked.
-- **Don't commit** `*.work.txt`, `INTEGRATION-REPORT.md`, mockup PNGs.
-- **Move files** via `git mv`.
-- **`AGENTS.md`:** `next dev` may rewrite it. Leave it intact; keep the `@AGENTS.md` import at the top.
+- **Don't commit** scratch files (`*.work.txt`, `INTEGRATION-REPORT.md`, mockup PNGs; all gitignored).
+- **Moving files:** use `git mv`.
+- **`AGENTS.md`:** `next dev` may rewrite it. Leave it intact, and keep the `@AGENTS.md` import at the top of this file.
 
 ## Definition of done
 1. `npm run build`, `npx tsc --noEmit`, and `npm run lint` are clean.
-2. The changed route loads in `npm run dev`, with data and empty states checked.
-3. Stored data still loads (no breaking `Expense` change without a migration).
+2. The changed route loads in `npm run dev` while signed in, with data and empty states checked.
+3. Existing data still loads (no breaking `Expense` change without a migration).
 4. Code is in the right folder and follows the import direction; helpers are reused.
 5. Any new screen is reachable from `/` on desktop and mobile.
+6. Anything that touches data respects RLS: no secret-key queries without a user-id filter.

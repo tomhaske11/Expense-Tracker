@@ -1,6 +1,7 @@
 import { QuickAddRequestSchema } from '@/features/expenses/lib/quickAdd';
 import { QuickAddError, parseExpenseText } from '@/features/expenses/server/parseExpenseText';
 import { limitClaudeRequest } from '@/lib/rateLimit';
+import { requireUser } from '@/integrations/supabase/server';
 
 /** POST { text, today } → ParsedExpense. Parses only; the browser saves after the user confirms. */
 export async function POST(request: Request) {
@@ -16,7 +17,9 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Enter a short description of one expense.' }, { status: 400 });
   }
 
-  const limited = limitClaudeRequest(request);
+  const user = await requireUser(request);
+  if (user instanceof Response) return user;
+  const limited = limitClaudeRequest(request, user.id);
   if (limited) return limited;
 
   try {

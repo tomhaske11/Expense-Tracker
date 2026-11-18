@@ -193,23 +193,3 @@ export function planRestore(text: string, existing: Expense[], now = new Date())
 
   return { source, exportedAt, records, newRecords, alreadyPresent, skipped, recategorized, dailyBudget };
 }
-
-/**
- * When the app should nudge for a backup: never backed up (with at least `minExpenses`), or the
- * last backup is over 30 days old and something changed since. Snoozing hides it until a date.
- */
-export function needsBackupReminder(
-  expenses: Expense[],
-  status: { lastBackupAt: string | null; snoozedUntil: string | null },
-  now = new Date(),
-  minExpenses = 5
-): { due: boolean; daysSince: number | null } {
-  if (expenses.length < minExpenses) return { due: false, daysSince: null };
-  if (status.snoozedUntil && Date.parse(status.snoozedUntil) > now.getTime()) return { due: false, daysSince: null };
-  if (!status.lastBackupAt) return { due: true, daysSince: null };
-
-  const last = Date.parse(status.lastBackupAt);
-  const daysSince = Math.floor((now.getTime() - last) / 86_400_000);
-  const latestChange = Math.max(...expenses.map((e) => Date.parse(e.updatedAt) || 0));
-  return { due: daysSince >= 30 && latestChange > last, daysSince };
-}

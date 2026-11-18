@@ -1,73 +1,78 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Brand } from '@/app/_components/Brand';
+import { FormEvent, Suspense, useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { getSupabaseBrowser } from '@/integrations/supabase/browser';
+import AuthCard, { INPUT, LABEL, PRIMARY, safeNext } from '@/app/_components/AuthCard';
 
-/** Where to go after signing in: the ?next= path, if it's a same-site path. */
-function nextPath(): string {
-  const next = new URLSearchParams(window.location.search).get('next');
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
-}
-
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const notice =
+    params.get('error') === 'link'
+      ? 'That link has expired or was already used. Sign in, or request a new one.'
+      : params.get('deleted')
+        ? 'Your account and all its data were deleted.'
+        : null;
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!password || loading) return;
+    if (loading) return;
     setLoading(true);
     setError(null);
-    try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      });
-      if (res.ok) {
-        router.replace(nextPath());
-        return;
-      }
-      const data: { error?: string } | null = await res.json().catch(() => null);
-      setError(data?.error ?? 'Sign-in failed. Please try again.');
-    } catch {
-      setError("Couldn't reach the server. Is it running?");
-    } finally {
+    const { error: e } = await getSupabaseBrowser().auth.signInWithPassword({ email: email.trim(), password });
+    if (e) {
+      setError(e.message === 'Email not confirmed' ? 'Confirm your email first: check your inbox for the link.' : 'Wrong email or password.');
       setLoading(false);
+      return;
     }
+    router.replace(safeNext(params.get('next')));
+    router.refresh();
   };
 
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center px-4">
-      <form onSubmit={submit} className="bg-panel rounded-lg p-8 w-full max-w-sm border border-line">
-        <div className="mb-8">
-          <Brand href={null} />
-          <p className="mt-2 text-sm text-ink-muted">Sign in to continue.</p>
+    <AuthCard
+      title="Sign in"
+      footer={
+        <>
+          New to expenseAI?{' '}
+          <Link href="/signup" className="text-accent hover:text-accent-strong">
+            Create an account
+          </Link>
+        </>
+      }
+    >
+      {notice && <p className="mb-4 text-sm text-amber-300">{notice}</p>}
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <label htmlFor="email" className={LABEL}>Email</label>
+          <input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} />
         </div>
-        <label htmlFor="password" className="block text-sm font-medium text-ink-soft mb-1">
-          Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoFocus
-          className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-accent mb-4"
-        />
-        {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
-        <button
-          type="submit"
-          disabled={!password || loading}
-          className="w-full px-4 py-2 bg-accent text-accent-ink rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-        >
+        <div>
+          <div className="flex justify-between">
+            <label htmlFor="password" className={LABEL}>Password</label>
+            <Link href="/forgot-password" className="text-xs text-accent hover:text-accent-strong">Forgot password?</Link>
+          </div>
+          <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={INPUT} />
+        </div>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <button type="submit" disabled={loading} className={PRIMARY}>
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-    </div>
+    </AuthCard>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

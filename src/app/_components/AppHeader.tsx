@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeftIcon } from '@/lib/icons';
+import { ArrowLeftIcon, UserIcon } from '@/lib/icons';
+import SyncErrorBanner from '@/app/_components/SyncErrorBanner';
 import { Brand } from '@/app/_components/Brand';
 
 /**
@@ -13,6 +14,7 @@ export default function AppHeader({ children, below }: { children?: ReactNode; b
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Brand />
+          <div className="flex items-center gap-2">
           {children ?? (
             <Link
               href="/"
@@ -22,7 +24,12 @@ export default function AppHeader({ children, below }: { children?: ReactNode; b
               <span className="hidden sm:inline">Back to Dashboard</span>
             </Link>
           )}
+            <Link href="/account" aria-label="Account" title="Account" className="p-2 rounded-full text-ink-muted hover:text-accent transition-colors">
+              <UserIcon className="w-5 h-5" />
+            </Link>
+          </div>
         </div>
+        <SyncErrorBanner />
         {below}
       </div>
     </header>

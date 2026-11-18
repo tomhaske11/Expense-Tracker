@@ -1,4 +1,4 @@
-import { getUserId } from '@/lib/session';
+import { requireUser } from '@/integrations/supabase/server';
 import { ExchangeRequestSchema } from '@/features/imports/lib/protocol';
 import { getBankProvider } from '@/features/imports/server/bank';
 import { getConnectionStore, sealToken, toView } from '@/features/imports/server/bank/connectionStore';
@@ -6,6 +6,8 @@ import { readJson } from '@/features/imports/server/http';
 
 /** POST { publicToken } → BankConnectionView. The access token is stored server-side only. */
 export async function POST(request: Request) {
+  const user = await requireUser(request);
+  if (user instanceof Response) return user;
   const input = await readJson(request, ExchangeRequestSchema, 'Missing the bank link token.');
   if (input instanceof Response) return input;
   const provider = getBankProvider();
@@ -17,7 +19,7 @@ export async function POST(request: Request) {
   }
   const connection = {
     id: `conn_${crypto.randomUUID()}`,
-    userId: getUserId(request),
+    userId: user.id,
     provider: provider.id,
     institution: result.institution,
     accounts: result.accounts,

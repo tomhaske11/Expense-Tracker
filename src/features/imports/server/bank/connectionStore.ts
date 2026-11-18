@@ -3,13 +3,13 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { BankConnectionView } from '@/features/imports/lib/protocol';
+import { getSupabaseAdmin } from '@/integrations/supabase/server';
 
 /*
  * Bank connections, stored on the server only. Access tokens never reach the browser.
  *
- * FileConnectionStore keeps them in .data/bank-connections.json (gitignored), which suits
- * the single-process `next start` deployment. When the app gets a database, implement
- * ConnectionStore against it; nothing else changes. Tokens are encrypted with AES-256-GCM
+ * SupabaseConnectionStore (when SUPABASE_SECRET_KEY is set) keeps them in a server-only table;
+ * FileConnectionStore (.data/, gitignored) is the fallback for local work without a database. Tokens are encrypted with AES-256-GCM
  * when BANK_TOKEN_KEY is set, and a live (non-sandbox) provider refuses to store them otherwise.
  */
 
@@ -118,9 +118,77 @@ class FileConnectionStore implements ConnectionStore {
   }
 }
 
+// ---------- Supabase-backed store ----------
+
+interface ConnectionRow {
+  id: string;
+  user_id: string;
+  provider: string;
+  institution: StoredConnection['institution'];
+  accounts: StoredConnection['accounts'];
+  access_token: string;
+  cursor: string | null;
+  created_at: string;
+  last_synced_at: string | null;
+}
+
+const fromRow = (r: ConnectionRow): StoredConnection => ({
+  id: r.id,
+  userId: r.user_id,
+  provider: r.provider,
+  institution: r.institution,
+  accounts: r.accounts,
+  accessToken: r.access_token,
+  cursor: r.cursor,
+  createdAt: r.created_at,
+  lastSyncedAt: r.last_synced_at,
+});
+
+/**
+ * public.bank_connections, read and written with the secret key (the table has RLS enabled and
+ * no policies, so browsers can't reach it). Every query is filtered by the verified user id.
+ */
+class SupabaseConnectionStore implements ConnectionStore {
+  async list(userId: string) {
+    const { data, error } = await getSupabaseAdmin().from('bank_connections').select('*').eq('user_id', userId).order('created_at');
+    if (error) throw new Error(`Loading bank connections failed: ${error.message}`);
+    return (data as ConnectionRow[]).map(fromRow);
+  }
+
+  async get(userId: string, id: string) {
+    const { data, error } = await getSupabaseAdmin().from('bank_connections').select('*').eq('user_id', userId).eq('id', id).maybeSingle();
+    if (error) throw new Error(`Loading bank connection failed: ${error.message}`);
+    return data ? fromRow(data as ConnectionRow) : null;
+  }
+
+  async save(c: StoredConnection) {
+    const row: ConnectionRow = {
+      id: c.id,
+      user_id: c.userId,
+      provider: c.provider,
+      institution: c.institution,
+      accounts: c.accounts,
+      access_token: c.accessToken,
+      cursor: c.cursor,
+      created_at: c.createdAt,
+      last_synced_at: c.lastSyncedAt,
+    };
+    const { error } = await getSupabaseAdmin().from('bank_connections').upsert(row);
+    if (error) throw new Error(`Saving bank connection failed: ${error.message}`);
+  }
+
+  async remove(userId: string, id: string) {
+    const { error } = await getSupabaseAdmin().from('bank_connections').delete().eq('user_id', userId).eq('id', id);
+    if (error) throw new Error(`Removing bank connection failed: ${error.message}`);
+  }
+}
+
 let store: ConnectionStore | null = null;
 
+/** Supabase when the secret key is set (production); otherwise the local file (development without a database). */
 export function getConnectionStore(): ConnectionStore {
-  store ??= new FileConnectionStore(process.env.BANK_CONNECTIONS_FILE ?? path.join(process.cwd(), '.data', 'bank-connections.json'));
+  store ??= process.env.SUPABASE_SECRET_KEY
+    ? new SupabaseConnectionStore()
+    : new FileConnectionStore(process.env.BANK_CONNECTIONS_FILE ?? path.join(process.cwd(), '.data', 'bank-connections.json'));
   return store;
 }

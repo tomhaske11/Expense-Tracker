@@ -1,4 +1,4 @@
-import { getUserId } from '@/lib/session';
+import { requireUser } from '@/integrations/supabase/server';
 import { SyncRequestSchema, type SyncResponse } from '@/features/imports/lib/protocol';
 import { getBankProvider } from '@/features/imports/server/bank';
 import { getConnectionStore, openToken } from '@/features/imports/server/bank/connectionStore';
@@ -10,9 +10,11 @@ import { readJson } from '@/features/imports/server/http';
  * so a cancelled review is simply offered again next time.
  */
 export async function POST(request: Request) {
+  const user = await requireUser(request);
+  if (user instanceof Response) return user;
   const input = await readJson(request, SyncRequestSchema, 'Missing the connection.');
   if (input instanceof Response) return input;
-  const connection = await getConnectionStore().get(getUserId(request), input.connectionId);
+  const connection = await getConnectionStore().get(user.id, input.connectionId);
   if (!connection) return Response.json({ error: 'Connection not found.' }, { status: 404 });
 
   const provider = getBankProvider();

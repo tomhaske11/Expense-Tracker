@@ -1,20 +1,17 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { formatDistanceToNow } from 'date-fns';
 import { Expense } from '@/features/expenses/types';
 import { useExpenses } from '@/features/expenses/hooks/useExpenses';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { AlertIcon, CheckCircleIcon, DownloadIcon, FileIcon } from '@/lib/icons';
+import { CheckCircleIcon, DownloadIcon, FileIcon } from '@/lib/icons';
 import { ExportService } from '@/features/export/lib/exportService';
-import { useBackupStatus } from '@/features/export/hooks/useBackupStatus';
 import {
   MAX_BACKUP_BYTES,
   RestoreError,
   RestorePlan,
   backupFilename,
   buildBackup,
-  needsBackupReminder,
   planRestore,
 } from '@/features/export/lib/backup';
 
@@ -40,21 +37,18 @@ function download(expenses: Expense[], dailyBudget: number, filename: string) {
   ExportService.downloadFile(JSON.stringify(buildBackup(expenses, dailyBudget), null, 2), filename, 'application/json');
 }
 
-/** Back up now, restore from a backup (with preview), open the export modal, and the backup reminder. */
+/** Download a backup, restore from one (with preview), and open the export modal. */
 export default function BackupPanel({ expenses, dailyBudget, onRestoreBudget, onOpenExport }: BackupPanelProps) {
   const { importExpenses } = useExpenses();
-  const { status, markBackedUp, snooze } = useBackupStatus();
   const [stage, setStage] = useState<Stage>({ kind: 'idle' });
   const [restoreBudget, setRestoreBudget] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const reminder = needsBackupReminder(expenses, status);
   const empty = expenses.length === 0;
 
   const backUpNow = () => {
     download(expenses, dailyBudget, backupFilename());
-    markBackedUp();
-    setStage({ kind: 'done', message: `Backed up ${expenses.length} expenses. Keep the file somewhere safe, like cloud storage.` });
+    setStage({ kind: 'done', message: `Downloaded a backup of ${expenses.length} expenses.` });
   };
 
   const chooseFile = async (file: File) => {
@@ -96,17 +90,15 @@ export default function BackupPanel({ expenses, dailyBudget, onRestoreBudget, on
 
   return (
     <div
-      className={`bg-panel border rounded-lg p-6 ${reminder.due ? 'border-amber-500/40' : 'border-line'}`}
+      className="bg-panel border border-line rounded-lg p-6"
     >
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-ink mb-1">{empty ? 'Restore your data' : 'Back up & export'}</h3>
+          <h3 className="text-lg font-semibold text-ink mb-1">{empty ? 'Restore a backup' : 'Back up & export'}</h3>
           <p className="text-sm text-ink-muted">
             {empty
-              ? 'New device or cleared browser? Restore from an expenseAI backup file.'
-              : status.lastBackupAt
-                ? `Last backup ${formatDistanceToNow(new Date(status.lastBackupAt), { addSuffix: true })}. Your expenses are stored only in this browser.`
-                : 'Not backed up yet. Your expenses are stored only in this browser, so a backup is your only copy.'}
+              ? 'Have an expenseAI backup file? Restore it into your account.'
+              : 'Your expenses are saved to your account. Download a backup copy or export them anytime.'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -117,7 +109,7 @@ export default function BackupPanel({ expenses, dailyBudget, onRestoreBudget, on
               className="px-4 py-2 bg-accent text-accent-ink rounded-full hover:bg-accent-strong transition-colors text-sm font-medium flex items-center gap-2"
             >
               <DownloadIcon className="w-4 h-4" />
-              Back up now
+              Download backup
             </button>
           )}
           <button
@@ -148,19 +140,6 @@ export default function BackupPanel({ expenses, dailyBudget, onRestoreBudget, on
         </div>
       </div>
 
-      {reminder.due && stage.kind === 'idle' && (
-        <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-          <p className="text-sm text-amber-300 flex items-start gap-2">
-            <AlertIcon className="w-4 h-4 mt-0.5 shrink-0" />
-            {reminder.daysSince === null
-              ? `You have ${expenses.length} expenses and no backup. If this browser's data is cleared, they're gone.`
-              : `It's been ${reminder.daysSince} days since your last backup, and your data has changed.`}
-          </p>
-          <button type="button" onClick={() => snooze(7)} className="text-sm text-ink-muted hover:text-ink shrink-0">
-            Remind me in a week
-          </button>
-        </div>
-      )}
 
       <div aria-live="polite">
         {(stage.kind === 'preview' || stage.kind === 'confirm-replace') && (
