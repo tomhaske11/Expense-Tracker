@@ -1,5 +1,6 @@
 import { QuickAddRequestSchema } from '@/features/expenses/lib/quickAdd';
 import { QuickAddError, parseExpenseText } from '@/features/expenses/server/parseExpenseText';
+import { limitClaudeRequest } from '@/lib/rateLimit';
 
 /** POST { text, today } → ParsedExpense. Parses only; the browser saves after the user confirms. */
 export async function POST(request: Request) {
@@ -14,6 +15,9 @@ export async function POST(request: Request) {
   if (!input.success) {
     return Response.json({ error: 'Enter a short description of one expense.' }, { status: 400 });
   }
+
+  const limited = limitClaudeRequest(request);
+  if (limited) return limited;
 
   try {
     const parsed = await parseExpenseText(input.data.text, input.data.today);

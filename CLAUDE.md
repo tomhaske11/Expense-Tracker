@@ -4,7 +4,7 @@
 
 ## 1. Application type
 - **Web app, mostly client-side:** single-user, Next.js App Router.
-- **Data:** browser `localStorage` only. No database, server actions, or auth.
+- **Data:** browser `localStorage` only; no database. Optional password gate (`APP_PASSWORD`).
 - **Server:** POST routes call Claude: `/api/quick-add` (text), `/api/receipt` (photo), `/api/coach`, `/api/assistant`. None store data.
 - **Rendering:** all pages `'use client'`, prerendered static.
 
@@ -18,7 +18,7 @@
 
 ## 3. Tech stack (`package.json`)
 - **Next.js 16.3.1** (Turbopack, `src/`). Newer than most training data: read `node_modules/next/dist/docs/` before using an unfamiliar API.
-- **React 19.2.** TypeScript 5 (`strict`); `@/*` maps to `./src/*`.
+- **React 19.2**, TypeScript 5 `strict`, `@/*` → `./src/*`.
 - **Tailwind CSS v4** via `@tailwindcss/postcss`; no `tailwind.config.js`, tokens in `globals.css` (`@theme inline`).
 - **Libraries:** Recharts 3, date-fns 4, jspdf + autotable (browser PDF), `@anthropic-ai/sdk` (server; `import type` elsewhere), zod.
 - **Lint:** ESLint 9 flat config (next core-web-vitals + typescript). **Tests:** none installed.
@@ -51,9 +51,10 @@ src/
     assistant/             CHAT AGENT: lib/ (tools.ts zod schemas, runTools.ts, protocol.ts, cleanup.ts),
       hooks/useAssistantChat.ts (tool loop), server/, components/ (AssistantTranscript is shared)
   integrations/anthropic/  server-only client, CLAUDE_MODEL ('claude-opus-5-5'), describeAnthropicError
-  lib/utils.ts             SHARED, domain-free: formatCurrency, formatDate, generateId
+  lib/                     SHARED, domain-free: utils.ts; server-only session.ts, rateLimit.ts
+  proxy.ts                 if APP_PASSWORD: pages → /login, /api/* → 401
 public/                    static assets
-docs/dev/, docs/user/      dev docs and how-tos (/document-feature)
+docs/                      dev docs, how-tos
 ```
 **Import direction:** `app → assistant → analytics → export → expenses → lib`. Never import upward.
 - `lib/` and `integrations/` import no feature; a helper needing `Expense` belongs in a feature.
@@ -67,16 +68,16 @@ docs/dev/, docs/user/      dev docs and how-tos (/document-feature)
   1. Create `src/app/<name>/page.tsx`.
   2. Put its UI in the right feature's `components/`.
   3. In `src/app/page.tsx` add a desktop header link (`hidden sm:flex`) **and** mobile floating button (`sm:hidden`).
-- Pages hold no aggregation logic. `top-categories/page.tsx` still does; don't copy it, move it out when you touch it.
+- Pages hold no aggregation logic (`top-categories/page.tsx` still does; move it out when you touch it).
 
 ## 5. External systems
 - **Anthropic Claude API**, called from the server with `ANTHROPIC_API_KEY` in `.env.local` (gitignored). The key must never reach the browser.
-  - All use server-side refusal fallbacks. Quick add, receipts, coach: `beta.messages.parse`, zod schema, `effort: 'low'`.
+  - All use refusal fallbacks. Quick add, receipts, coach: `beta.messages.parse` + zod, `effort: 'low'`.
   - Text and photos go to Anthropic (the UI says so); `sanitize` re-validates output. The coach sends only aggregates.
   - Assistant: `beta.messages.stream`, `effort: 'medium'`; the browser keeps history, runs tools, loops (max 10 steps). Tool results go to Anthropic (UI says so).
   - Claude never writes to storage: quick add prefills a form; `propose_changes` shows a card the user approves.
 - **Exports** download via a Blob link. **Fonts** (`next/font/google`) load at build time.
-- **Adding one:** route in `src/app/api/<name>/`, client in `src/integrations/<name>/`, secrets in `.env.local`.
+- **Adding one:** route in `src/app/api/<name>/`, client in `src/integrations/<name>/`, secrets in `.env.local`. Claude routes call `limitClaudeRequest`.
 
 ## 6. Build and deploy
 ```bash
@@ -86,8 +87,8 @@ npm start          # serve the build
 npm run lint       # must stay clean
 npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 ```
-- **No deploy setup** (no Dockerfile, CI, or config). Deploy with `next build` + `next start`; not a static export (API routes need a server).
-- **Before hosting publicly,** add auth or rate limiting to all `/api/*` routes. There's no login, so anyone could spend the API key.
+- **No deploy setup** (no Dockerfile/CI). Deploy with `next build` + `next start` (API routes need a server).
+- **Before hosting publicly,** set `APP_PASSWORD`. Claude routes are rate-limited in memory (`LIMITS`), so run one process.
 - **Never commit `.next/`.** CI (if added): `.github/workflows/` running lint, tsc, build.
 
 ## Rules the code depends on
@@ -119,7 +120,7 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 
 **Validation (`ExpenseForm`)**
 - Date required; amount > 0 matching `/^\d+\.?\d{0,2}$/`; description required.
-- Future dates: blocked by the date input's `max`; quick add clamps to today.
+- Future dates: blocked by the input's `max`; quick add clamps to today.
 - The parent resets the form by changing its `key`.
 
 **Lint**
@@ -128,15 +129,15 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 - Never call setState from an effect to mirror props.
 
 ## UI conventions
-- **Styling:** Tailwind utilities inline; no CSS modules or component library.
+- **Styling:** inline Tailwind; no CSS modules or component library.
 - **Page shell:** `min-h-screen bg-gray-50`; sticky white header with the 💸 logo (links to `/`) and "Back to Dashboard"; content in `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`; copy an existing page's spinner.
 - **Cards:** `bg-white rounded-lg shadow-sm p-6`; accent `from-blue-600 to-purple-600`.
 - **Empty states:** handle both "no expenses" and "none in the selected range".
-- **Charts:** explicit-height container around `ResponsiveContainer`; tooltips use `formatCurrency`.
+- **Charts:** fixed-height wrapper around `ResponsiveContainer`; tooltips use `formatCurrency`.
 - **Dark mode:** unsupported; no `dark:` variants.
 
 ## Git and workflow
-- **Branches:** `main` integrates; features go on `feature/<name>`, often in sibling worktrees (`docs/dev/worktrees.md`).
+- **Branches:** `main` integrates; features on `feature/<name>`, often in worktrees (`docs/dev/worktrees.md`).
 - **Slash commands** (`.claude/commands/`): `/parallel-work`, `/integrate-parallel-work` (worktrees), `/document-feature <name>`.
 - **Commits:** imperative ("Implement Top Vendors page"); merges "Merge feature/<name>: <summary>".
 - **When to commit or push:** only when asked.
