@@ -7,10 +7,14 @@ import {
   calculateMonthlyTotals,
   calculateVendorStats,
   calculateWeekdayTotals,
+  findPossibleDuplicates,
+  listVendors,
 } from '@/features/analytics/lib/stats';
 import { z } from 'zod';
 import {
   BudgetStreakInput,
+  FindDuplicatesInput,
+  ListVendorsInput,
   ProposeChangesInput,
   QueryExpensesInput,
   SummarizeSpendingInput,
@@ -39,6 +43,8 @@ export interface Proposal {
 }
 
 const VENDOR_LIMIT = 25;
+const MAX_VENDORS_LISTED = 400;
+const MAX_DUPLICATE_GROUPS = 50;
 const round = (n: number) => Math.round(n * 100) / 100;
 
 const toRow = (e: Expense) => ({
@@ -92,14 +98,18 @@ function queryExpenses(input: QueryExpensesInput, expenses: Expense[]): ToolOutc
     return sort === 'date_asc' ? byDate : -byDate;
   });
   const limit = input.limit ?? 50;
+  const offset = input.offset ?? 0;
+  const page = sorted.slice(offset, offset + limit);
 
   return {
     ok: true,
     result: {
       matched_count: matches.length,
       matched_total: round(matches.reduce((sum, e) => sum + e.amount, 0)),
-      returned_count: Math.min(limit, sorted.length),
-      expenses: sorted.slice(0, limit).map(toRow),
+      offset,
+      returned_count: page.length,
+      has_more: offset + page.length < matches.length,
+      expenses: page.map(toRow),
     },
   };
 }
@@ -251,6 +261,40 @@ export function runReadTool(name: string, rawInput: unknown, expenses: Expense[]
     case 'summarize_spending': {
       const input = parseInput(SummarizeSpendingInput, rawInput);
       return 'error' in input ? { ok: false, error: input.error } : summarizeSpending(input.data, expenses);
+    }
+    case 'list_vendors': {
+      const input = parseInput(ListVendorsInput, rawInput);
+      if ('error' in input) return { ok: false, error: input.error };
+      const scoped = input.data.category ? expenses.filter((e) => e.category === input.data.category) : expenses;
+      const vendors = listVendors(scoped);
+      return {
+        ok: true,
+        result: {
+          vendor_count: vendors.length,
+          vendors: vendors.slice(0, MAX_VENDORS_LISTED).map((v) => ({
+            vendor: v.vendor,
+            count: v.count,
+            total: round(v.total),
+            categories: v.categories,
+            first_date: v.first,
+            last_date: v.last,
+          })),
+          ...(vendors.length > MAX_VENDORS_LISTED && { note: `Only the first ${MAX_VENDORS_LISTED} vendors are listed.` }),
+        },
+      };
+    }
+    case 'find_possible_duplicates': {
+      const input = parseInput(FindDuplicatesInput, rawInput);
+      if ('error' in input) return { ok: false, error: input.error };
+      const groups = findPossibleDuplicates(expenses, input.data.max_days_apart ?? 3);
+      return {
+        ok: true,
+        result: {
+          group_count: groups.length,
+          groups: groups.slice(0, MAX_DUPLICATE_GROUPS).map((group) => group.map(toRow)),
+          ...(groups.length > MAX_DUPLICATE_GROUPS && { note: `Only the ${MAX_DUPLICATE_GROUPS} most recent groups are listed.` }),
+        },
+      };
     }
     case 'get_budget_streak': {
       const input = parseInput(BudgetStreakInput, rawInput);

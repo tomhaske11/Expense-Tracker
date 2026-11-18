@@ -193,3 +193,78 @@ export function findRepeatedCharges(expenses: Expense[]): { vendor: string; amou
     .map((g) => ({ ...g, count: g.dates.length, dates: g.dates.sort() }))
     .sort((a, b) => b.amount * b.count - a.amount * a.count);
 }
+
+/**
+ * A vendor name reduced for matching: lower case, store numbers and punctuation removed
+ * ("CHIPOTLE #1234" and "Chipotle" both become "chipotle").
+ */
+export function normalizeVendor(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/#\s*\d+/g, ' ')
+    .replace(/[^a-z0-9& ]+/g, ' ')
+    .replace(/\b\d+\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Every distinct vendor (description) with usage, sorted by normalized name so variants sit together. */
+export function listVendors(expenses: Expense[]) {
+  const vendors = new Map<
+    string,
+    { vendor: string; normalized: string; count: number; total: number; categories: Set<ExpenseCategory>; first: string; last: string }
+  >();
+  for (const e of expenses) {
+    const vendor = e.description.trim() || 'Unknown';
+    const entry = vendors.get(vendor) ?? {
+      vendor,
+      normalized: normalizeVendor(vendor),
+      count: 0,
+      total: 0,
+      categories: new Set<ExpenseCategory>(),
+      first: e.date,
+      last: e.date,
+    };
+    entry.count++;
+    entry.total += e.amount;
+    entry.categories.add(e.category);
+    if (e.date < entry.first) entry.first = e.date;
+    if (e.date > entry.last) entry.last = e.date;
+    vendors.set(vendor, entry);
+  }
+  return [...vendors.values()]
+    .map((v) => ({ ...v, categories: [...v.categories] }))
+    .sort((a, b) => a.normalized.localeCompare(b.normalized) || a.vendor.localeCompare(b.vendor));
+}
+
+/**
+ * Groups of expenses that may be the same charge recorded twice: same amount, same normalized
+ * vendor, and dates no more than `maxDaysApart` apart. Each group is sorted by date.
+ */
+export function findPossibleDuplicates(expenses: Expense[], maxDaysApart = 3): Expense[][] {
+  const buckets = new Map<string, Expense[]>();
+  for (const e of expenses) {
+    const key = `${normalizeVendor(e.description)}|${Math.round(e.amount * 100)}`;
+    const bucket = buckets.get(key) ?? [];
+    bucket.push(e);
+    buckets.set(key, bucket);
+  }
+
+  const groups: Expense[][] = [];
+  for (const bucket of buckets.values()) {
+    if (bucket.length < 2) continue;
+    const sorted = [...bucket].sort((a, b) => a.date.localeCompare(b.date));
+    let group: Expense[] = [sorted[0]];
+    for (let i = 1; i < sorted.length; i++) {
+      const gap = differenceInCalendarDays(parseISO(sorted[i].date), parseISO(group[group.length - 1].date));
+      if (gap <= maxDaysApart) {
+        group.push(sorted[i]);
+      } else {
+        if (group.length > 1) groups.push(group);
+        group = [sorted[i]];
+      }
+    }
+    if (group.length > 1) groups.push(group);
+  }
+  return groups.sort((a, b) => b[0].date.localeCompare(a[0].date));
+}
