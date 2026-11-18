@@ -3,7 +3,10 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Expense } from '@/features/expenses/types';
-import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/features/expenses/constants';
+import { CATEGORY_COLORS } from '@/features/expenses/constants';
+import CategoryIcon from '@/features/expenses/components/CategoryIcon';
+import { BulbIcon, PieIcon } from '@/lib/icons';
+import { CHART } from '@/lib/chartTheme';
 import { formatCurrency } from '@/lib/utils';
 import { getCurrentMonthExpenses } from '@/features/expenses/lib/filters';
 import { calculateBudgetStreak, calculateCategoryBreakdown, suggestDailyBudget } from '@/features/analytics/lib/stats';
@@ -46,9 +49,9 @@ export default function MonthlyInsights({ expenses, streakGoal = 30 }: MonthlyIn
   const chartData = breakdown.map((item) => ({ name: item.category, value: item.amount }));
 
   return (
-    <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8 max-w-xl mx-auto">
+    <section className="bg-panel rounded-2xl border border-line p-6 sm:p-8 max-w-xl mx-auto">
       {/* Title */}
-      <h2 className="text-3xl font-bold text-gray-900 text-center pb-4 mb-6 border-b-2 border-dashed border-gray-300">
+      <h2 className="text-xs font-medium uppercase tracking-[0.3em] text-ink-muted text-center pb-4 mb-6 border-b border-line">
         Monthly Insights
       </h2>
 
@@ -67,24 +70,24 @@ export default function MonthlyInsights({ expenses, streakGoal = 30 }: MonthlyIn
                   innerRadius="58%"
                   outerRadius="92%"
                   paddingAngle={1}
-                  stroke="#ffffff"
+                  stroke={CHART.surface}
                   strokeWidth={2}
                 >
                   {chartData.map((entry) => (
                     <Cell key={entry.name} fill={CATEGORY_COLORS[entry.name]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                <Tooltip formatter={(value) => formatCurrency(Number(value))} {...CHART.tooltip} />
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-sm font-semibold text-gray-500">Spending</span>
-              <span className="text-xl font-bold text-gray-900">{formatCurrency(monthlyTotal)}</span>
+              <span className="text-sm font-semibold text-ink-muted">Spending</span>
+              <span className="text-xl font-bold text-ink">{formatCurrency(monthlyTotal)}</span>
             </div>
           </>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center text-gray-500">
-            <div className="text-5xl mb-2">🍩</div>
+          <div className="h-full flex flex-col items-center justify-center text-ink-muted">
+            <PieIcon className="w-12 h-12 mb-3 text-ink-faint" />
             <p>No spending recorded this month yet.</p>
           </div>
         )}
@@ -93,7 +96,7 @@ export default function MonthlyInsights({ expenses, streakGoal = 30 }: MonthlyIn
       {/* Top 3 categories */}
       {topThree.length > 0 && (
         <div className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 text-right mb-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted text-right mb-2">
             Top {topThree.length}
           </p>
           <ul className="space-y-3">
@@ -103,10 +106,8 @@ export default function MonthlyInsights({ expenses, streakGoal = 30 }: MonthlyIn
                 className="flex items-center gap-3 border-l-4 pl-4 py-2"
                 style={{ borderColor: CATEGORY_COLORS[item.category] }}
               >
-                <span className="text-2xl" aria-hidden>
-                  {CATEGORY_ICONS[item.category]}
-                </span>
-                <span className="text-lg text-gray-900">
+                <CategoryIcon category={item.category} className="w-6 h-6" />
+                <span className="text-lg text-ink">
                   {item.category}: <span className="font-semibold">{formatCurrency(item.amount)}</span>
                 </span>
               </li>
@@ -116,31 +117,31 @@ export default function MonthlyInsights({ expenses, streakGoal = 30 }: MonthlyIn
       )}
 
       {/* Budget streak */}
-      <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-center gap-6">
+      <div className="border border-line bg-panel-raised/40 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-center gap-6">
         <div className="text-center">
-          <p className="text-lg font-medium text-gray-700">Budget Streak</p>
-          <p className="text-5xl font-bold text-green-600 my-1">{streak}</p>
-          <p className="text-lg text-gray-700">{streak === 1 ? 'day!' : 'days!'}</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-ink-muted">Budget streak</p>
+          <p className="text-6xl font-light text-accent my-1 tabular-nums">{streak}</p>
+          <p className="text-sm text-ink-soft">{streak === 1 ? 'day' : 'days'}</p>
         </div>
         <div className="w-40">
           <div
-            className="h-6 rounded-full bg-gray-100 border-2 border-gray-300 overflow-hidden"
+            className="h-2 rounded-full bg-line overflow-hidden"
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={streakGoal}
             aria-valuenow={Math.min(streak, streakGoal)}
             aria-label="Budget streak progress"
           >
-            <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${streakProgress}%` }} />
+            <div className="h-full bg-accent transition-all duration-500" style={{ width: `${streakProgress}%` }} />
           </div>
-          <p className="text-xs text-gray-500 text-center mt-1">
+          <p className="text-xs text-ink-muted text-center mt-1">
             {Math.min(streak, streakGoal)}/{streakGoal} days under {formatCurrency(dailyBudget)}/day
           </p>
         </div>
       </div>
 
       {/* Daily budget */}
-      <div className="mt-3 text-sm text-gray-700 text-center space-y-2">
+      <div className="mt-3 text-sm text-ink-soft text-center space-y-2">
         {editingBudget ? (
           <form onSubmit={saveBudget} className="flex items-center justify-center gap-2">
             <label htmlFor="daily-budget">Daily budget $</label>
@@ -153,12 +154,12 @@ export default function MonthlyInsights({ expenses, streakGoal = 30 }: MonthlyIn
               value={budgetInput}
               onChange={(e) => setBudgetInput(e.target.value)}
               autoFocus
-              className="w-24 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-24 px-2 py-1 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
             />
-            <button type="submit" className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button type="submit" className="px-3 py-1 bg-accent text-accent-ink rounded-lg hover:bg-accent-strong transition-colors">
               Save
             </button>
-            <button type="button" onClick={() => setEditingBudget(false)} className="px-2 py-1 text-gray-600 hover:text-gray-900">
+            <button type="button" onClick={() => setEditingBudget(false)} className="px-2 py-1 text-ink-muted hover:text-ink">
               Cancel
             </button>
           </form>
@@ -171,20 +172,20 @@ export default function MonthlyInsights({ expenses, streakGoal = 30 }: MonthlyIn
                 setBudgetInput(String(dailyBudget));
                 setEditingBudget(true);
               }}
-              className="text-blue-600 hover:text-blue-800 underline"
+              className="text-accent hover:text-accent-strong underline"
             >
               Change
             </button>
           </p>
         )}
         {suggestion && suggestion.amount !== dailyBudget && !editingBudget && (
-          <p className="text-gray-600">
-            💡 Based on your last {suggestion.basisDays} days, {formatCurrency(suggestion.amount)}/day is one you met on{' '}
+          <p className="text-ink-muted">
+            <BulbIcon className="inline w-4 h-4 mr-1 -mt-0.5 text-accent" />Based on your last {suggestion.basisDays} days, {formatCurrency(suggestion.amount)}/day is one you met on{' '}
             {Math.round(suggestion.hitRate * 100)}% of days.{' '}
             <button
               type="button"
               onClick={() => setDailyBudget(suggestion.amount)}
-              className="text-blue-600 hover:text-blue-800 underline"
+              className="text-accent hover:text-accent-strong underline"
             >
               Use {formatCurrency(suggestion.amount)}
             </button>

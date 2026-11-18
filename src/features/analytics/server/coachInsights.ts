@@ -14,7 +14,7 @@ export class CoachError extends Error {
   }
 }
 
-const SYSTEM_PROMPT = `You are a friendly, practical budget coach inside a personal expense tracker. You get a JSON summary of the user's spending for the current month so far, with comparisons to earlier months, and you write a short coaching note.
+const SYSTEM_PROMPT = `You are a friendly, practical budget coach inside expenseAI, a personal expense tracker. You get a JSON summary of the user's spending for the current month so far, with comparisons to earlier months, and you write a short coaching note.
 
 Write:
 - headline: one sentence summing up the month so far.

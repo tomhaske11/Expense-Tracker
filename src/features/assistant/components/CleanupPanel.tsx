@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAssistantChat } from '@/features/assistant/hooks/useAssistantChat';
 import { CLEANUP_INSTRUCTIONS, CLEANUP_LABEL } from '@/features/assistant/lib/cleanup';
 import AssistantTranscript from '@/features/assistant/components/AssistantTranscript';
+import { StopIcon, WandIcon } from '@/lib/icons';
 
 /**
  * One-click clean-up: Claude reviews every expense for duplicates, inconsistent vendor names
@@ -25,11 +26,14 @@ export default function CleanupPanel() {
   };
 
   return (
-    <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-4 mb-6">
+    <div className="rounded-lg border border-accent/30 bg-accent/5 p-4 mb-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <p className="font-semibold text-gray-900">{CLEANUP_LABEL}</p>
-          <p className="text-sm text-gray-600">
+          <p className="flex items-center gap-2 font-semibold text-ink">
+            <WandIcon className="w-5 h-5 text-accent" />
+            {CLEANUP_LABEL}
+          </p>
+          <p className="text-sm text-ink-muted">
             Claude checks all your expenses for duplicates, messy vendor names and wrong categories. You approve every
             fix.
           </p>
@@ -39,15 +43,16 @@ export default function CleanupPanel() {
             <button
               type="button"
               onClick={chat.stop}
-              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors text-sm font-medium"
+              className="flex items-center gap-1.5 px-4 py-2 bg-panel-raised text-ink border border-line rounded-full hover:border-red-400 hover:text-red-300 transition-colors text-sm font-medium"
             >
+              <StopIcon className="w-4 h-4" />
               Stop
             </button>
           ) : (
             <button
               type="button"
               onClick={start}
-              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
+              className="px-4 py-2 bg-accent text-accent-ink rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
             >
               {open ? 'Run again' : 'Start clean-up'}
             </button>
@@ -56,7 +61,7 @@ export default function CleanupPanel() {
             <button
               type="button"
               onClick={close}
-              className="px-3 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+              className="px-3 py-2 bg-panel text-ink-soft border border-line rounded-lg hover:bg-canvas transition-colors text-sm"
             >
               Close
             </button>
@@ -70,7 +75,7 @@ export default function CleanupPanel() {
         </div>
       )}
 
-      <p className="mt-3 text-xs text-gray-500">
+      <p className="mt-3 text-xs text-ink-muted">
         The expenses Claude looks at are sent to Anthropic&apos;s Claude API. Nothing changes until you approve it.
       </p>
     </div>

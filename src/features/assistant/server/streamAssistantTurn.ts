@@ -7,7 +7,7 @@ import { EXPENSE_CATEGORIES } from '@/features/expenses/constants';
 import { ASSISTANT_TOOLS } from '@/features/assistant/lib/tools';
 import type { AssistantStreamEvent } from '@/features/assistant/lib/protocol';
 
-const SYSTEM_PROMPT = `You are the assistant inside a personal expense tracker. You help one user understand and tidy up their own spending.
+const SYSTEM_PROMPT = `You are the assistant inside expenseAI, a personal expense tracker. You help one user understand and tidy up their own spending.
 
 The data
 - Each expense has an id, a date (yyyy-MM-dd), an amount in US dollars, a category (one of: ${EXPENSE_CATEGORIES.join(', ')}) and a description. The description doubles as the vendor name.
