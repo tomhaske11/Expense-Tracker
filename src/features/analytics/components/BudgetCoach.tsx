@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Expense } from '@/features/expenses/types';
 import { CoachInsights, buildCoachSummary } from '@/features/analytics/lib/coach';
+import { BulbIcon, CheckCircleIcon, EyeIcon, Icon, SparkleIcon } from '@/lib/icons';
 
 interface BudgetCoachProps {
   expenses: Expense[];
@@ -16,10 +17,10 @@ type Status = { kind: 'idle' } | { kind: 'loading' } | { kind: 'error'; message:
 // the page doesn't call Claude again for the same data.
 const cache = new Map<string, CoachInsights>();
 
-const KIND_STYLES: Record<CoachInsights['insights'][number]['kind'], { icon: string; className: string }> = {
-  positive: { icon: '✅', className: 'border-green-200 bg-green-50' },
-  watch: { icon: '👀', className: 'border-amber-200 bg-amber-50' },
-  tip: { icon: '💡', className: 'border-blue-200 bg-blue-50' },
+const KIND_STYLES: Record<CoachInsights['insights'][number]['kind'], { Icon: Icon; className: string; iconClass: string }> = {
+  positive: { Icon: CheckCircleIcon, className: 'border-accent/30 bg-accent/10', iconClass: 'text-accent' },
+  watch: { Icon: EyeIcon, className: 'border-amber-500/30 bg-amber-500/10', iconClass: 'text-amber-300' },
+  tip: { Icon: BulbIcon, className: 'border-line bg-panel-raised', iconClass: 'text-accent' },
 };
 
 /** "Coach me": Claude's plain-English read on the month, from an aggregate summary. */
@@ -63,49 +64,53 @@ export default function BudgetCoach({ expenses, dailyBudget }: BudgetCoachProps)
   const stale = result !== null && result.key !== key;
 
   return (
-    <div className="mt-6 rounded-xl border border-purple-200 bg-gradient-to-br from-blue-50 to-purple-50 p-6">
+    <div className="mt-6 rounded-xl border border-accent/30 bg-accent/5 p-6">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <p className="text-lg font-semibold text-gray-900">✨ Budget coach</p>
-          <p className="text-sm text-gray-600">Claude&apos;s read on your month so far.</p>
+          <p className="flex items-center gap-2 text-lg font-semibold text-ink">
+            <SparkleIcon className="w-5 h-5 text-accent" />
+            Budget coach
+          </p>
+          <p className="text-sm text-ink-muted">Claude&apos;s read on your month so far.</p>
         </div>
         {summary && (
           <button
             type="button"
             onClick={() => void run()}
             disabled={loading}
-            className="shrink-0 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity text-sm font-medium"
+            className="shrink-0 px-4 py-2 bg-accent text-accent-ink rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity text-sm font-medium"
           >
             {loading ? 'Thinking…' : result ? 'Refresh' : 'Coach me'}
           </button>
         )}
       </div>
 
-      {!summary && <p className="text-sm text-gray-600">Add an expense this month to get coaching.</p>}
+      {!summary && <p className="text-sm text-ink-muted">Add an expense this month to get coaching.</p>}
 
       <div aria-live="polite">
-        {status.kind === 'error' && <p className="text-sm text-red-600 mb-3">{status.message}</p>}
+        {status.kind === 'error' && <p className="text-sm text-red-400 mb-3">{status.message}</p>}
 
         {result && (
           <div className={stale ? 'opacity-60' : undefined}>
             {stale && (
-              <p className="text-xs text-gray-600 mb-2">Your data or budget changed since this was written. Refresh for an update.</p>
+              <p className="text-xs text-ink-muted mb-2">Your data or budget changed since this was written. Refresh for an update.</p>
             )}
-            <p className="text-gray-900 font-medium mb-3">{result.insights.headline}</p>
+            <p className="text-ink font-medium mb-3">{result.insights.headline}</p>
             <ul className="space-y-2 mb-3">
               {result.insights.insights.map((insight, i) => {
                 const style = KIND_STYLES[insight.kind];
                 return (
                   <li key={i} className={`rounded-lg border p-3 ${style.className}`}>
-                    <p className="text-sm font-semibold text-gray-900">
-                      <span aria-hidden>{style.icon}</span> {insight.title}
+                    <p className="text-sm font-semibold text-ink">
+                      <style.Icon className={`inline w-4 h-4 mr-1.5 -mt-0.5 ${style.iconClass}`} />
+                      {insight.title}
                     </p>
-                    <p className="text-sm text-gray-700">{insight.detail}</p>
+                    <p className="text-sm text-ink-soft">{insight.detail}</p>
                   </li>
                 );
               })}
             </ul>
-            <p className="text-sm text-gray-800">
+            <p className="text-sm text-ink">
               <span className="font-semibold">Try this: </span>
               {result.insights.suggestion}
             </p>
@@ -114,7 +119,7 @@ export default function BudgetCoach({ expenses, dailyBudget }: BudgetCoachProps)
       </div>
 
       {summary && (
-        <p className="mt-3 text-xs text-gray-500">
+        <p className="mt-3 text-xs text-ink-muted">
           Sends a summary of this month (totals by category and vendor, no individual expenses) to Anthropic&apos;s Claude
           API.
         </p>

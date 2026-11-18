@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Brand } from '@/app/_components/Brand';
 
 /** Where to go after signing in: the ?next= path, if it's a same-site path. */
 function nextPath(): string {
@@ -40,15 +41,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <form onSubmit={submit} className="bg-white rounded-lg shadow-sm p-8 w-full max-w-sm">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white text-xl font-bold">
-            💸
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Expense Tracker</h1>
+    <div className="min-h-screen bg-canvas flex items-center justify-center px-4">
+      <form onSubmit={submit} className="bg-panel rounded-lg p-8 w-full max-w-sm border border-line">
+        <div className="mb-8">
+          <Brand href={null} />
+          <p className="mt-2 text-sm text-ink-muted">Sign in to continue.</p>
         </div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="password" className="block text-sm font-medium text-ink-soft mb-1">
           Password
         </label>
         <input
@@ -58,13 +57,13 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoFocus
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+          className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-accent mb-4"
         />
-        {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+        {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
         <button
           type="submit"
           disabled={!password || loading}
-          className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+          className="w-full px-4 py-2 bg-accent text-accent-ink rounded-lg font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
         >
           {loading ? 'Signing in…' : 'Sign in'}
         </button>

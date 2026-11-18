@@ -1,11 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { Expense } from '@/features/expenses/types';
 import { formatCurrency } from '@/lib/utils';
 import { getCurrentMonthExpenses } from '@/features/expenses/lib/filters';
 import { calculateCategoryBreakdown } from '@/features/analytics/lib/stats';
-import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/features/expenses/constants';
+import { CATEGORY_COLORS } from '@/features/expenses/constants';
+import CategoryIcon from '@/features/expenses/components/CategoryIcon';
+import { BoxIcon, CalendarIcon, DownloadIcon, TrendIcon, WalletIcon } from '@/lib/icons';
+import { CHART } from '@/lib/chartTheme';
 import {
   PieChart,
   Pie,
@@ -51,36 +54,21 @@ export default function Dashboard({ expenses }: DashboardProps) {
   return (
     <>
       <div className="space-y-6">
-        {/* Export Button - Prominent placement */}
+        {/* Export banner */}
         {expenses.length > 0 && (
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg shadow-lg p-6">
-            <div className="flex items-center justify-between text-white">
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Export Your Data</h3>
-                <p className="text-blue-100 text-sm">
-                  Download your expenses in CSV, JSON, or PDF format with advanced filtering options
-                </p>
-              </div>
-              <button
-                onClick={() => setIsExportModalOpen(true)}
-                className="px-6 py-3 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-all font-semibold shadow-md hover:shadow-lg flex items-center gap-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Export Data
-              </button>
+          <div className="bg-panel border border-line rounded-lg p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-ink mb-1">Export your data</h3>
+              <p className="text-ink-muted text-sm">CSV, JSON or PDF, with filters and a preview.</p>
             </div>
+            <button
+              type="button"
+              onClick={() => setIsExportModalOpen(true)}
+              className="px-5 py-2.5 bg-accent text-accent-ink rounded-full hover:bg-accent-strong transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <DownloadIcon />
+              Export data
+            </button>
           </div>
         )}
 
@@ -89,29 +77,25 @@ export default function Dashboard({ expenses }: DashboardProps) {
         <SummaryCard
           title="Total Spending"
           value={formatCurrency(summary.totalSpending)}
-          icon="💰"
-          color="blue"
+          icon={<WalletIcon className="w-6 h-6" />}
           subtitle={`${summary.expenseCount} expenses`}
         />
         <SummaryCard
           title="This Month"
           value={formatCurrency(summary.monthlySpending)}
-          icon="📅"
-          color="green"
+          icon={<CalendarIcon className="w-6 h-6" />}
           subtitle={`${summary.monthlyExpenseCount} expenses`}
         />
         <SummaryCard
           title="Average Expense"
           value={formatCurrency(averageExpense)}
-          icon="📊"
-          color="purple"
+          icon={<TrendIcon className="w-6 h-6" />}
           subtitle="Per transaction"
         />
         <SummaryCard
           title="Top Category"
           value={topCategory?.category || 'N/A'}
-          icon={topCategory ? CATEGORY_ICONS[topCategory.category] : '📦'}
-          color="orange"
+          icon={topCategory ? <CategoryIcon category={topCategory.category} className="w-6 h-6" colored={false} /> : <BoxIcon className="w-6 h-6" />}
           subtitle={topCategory ? formatCurrency(topCategory.amount) : 'No data'}
         />
       </div>
@@ -120,8 +104,8 @@ export default function Dashboard({ expenses }: DashboardProps) {
       {summary.categoryBreakdown.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Pie Chart */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Spending by Category</h2>
+          <div className="bg-panel rounded-lg p-6 border border-line">
+            <h2 className="text-lg font-semibold text-ink mb-4">Spending by Category</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -132,37 +116,38 @@ export default function Dashboard({ expenses }: DashboardProps) {
                     labelLine={false}
                     label={renderCustomLabel}
                     outerRadius={100}
-                    fill="#8884d8"
                     dataKey="value"
+                    stroke={CHART.surface}
+                    strokeWidth={2}
                   >
                     {chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name]} />
                     ))}
                   </Pie>
                   <Tooltip content={CustomTooltip} />
-                  <Legend />
+                  <Legend formatter={(value) => <span style={{ color: CHART.text }}>{value}</span>} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           {/* Category Breakdown List */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Category Breakdown</h2>
+          <div className="bg-panel rounded-lg p-6 border border-line">
+            <h2 className="text-lg font-semibold text-ink mb-4">Category Breakdown</h2>
             <div className="space-y-3">
               {summary.categoryBreakdown.map((item) => (
                 <div key={item.category} className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">{CATEGORY_ICONS[item.category]}</span>
-                      <span className="font-medium text-gray-700">{item.category}</span>
+                      <CategoryIcon category={item.category} className="w-4 h-4" />
+                      <span className="font-medium text-ink-soft">{item.category}</span>
                     </div>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-ink">
                       {formatCurrency(item.amount)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                    <div className="flex-1 bg-panel-raised rounded-full h-2">
                       <div
                         className="h-2 rounded-full transition-all duration-300"
                         style={{
@@ -171,7 +156,7 @@ export default function Dashboard({ expenses }: DashboardProps) {
                         }}
                       />
                     </div>
-                    <span className="text-xs text-gray-600 w-12 text-right">
+                    <span className="text-xs text-ink-muted w-12 text-right">
                       {item.percentage.toFixed(1)}%
                     </span>
                   </div>
@@ -183,8 +168,8 @@ export default function Dashboard({ expenses }: DashboardProps) {
       )}
 
         {summary.categoryBreakdown.length === 0 && (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <p className="text-gray-500">No expenses to display. Add some expenses to see your spending breakdown!</p>
+          <div className="bg-panel rounded-lg p-8 text-center border border-line">
+            <p className="text-ink-muted">No expenses to display. Add some expenses to see your spending breakdown!</p>
           </div>
         )}
       </div>
@@ -202,30 +187,20 @@ export default function Dashboard({ expenses }: DashboardProps) {
 interface SummaryCardProps {
   title: string;
   value: string;
-  icon: string;
-  color: 'blue' | 'green' | 'purple' | 'orange';
+  icon: ReactNode;
   subtitle: string;
 }
 
-function SummaryCard({ title, value, icon, color, subtitle }: SummaryCardProps) {
-  const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    purple: 'bg-purple-50 text-purple-600',
-    orange: 'bg-orange-50 text-orange-600',
-  };
-
+function SummaryCard({ title, value, icon, subtitle }: SummaryCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-panel rounded-lg p-6 border border-line">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
-          <p className="text-xs text-gray-500">{subtitle}</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-ink-muted mb-2">{title}</p>
+          <p className="text-2xl font-semibold text-ink mb-1">{value}</p>
+          <p className="text-xs text-ink-muted">{subtitle}</p>
         </div>
-        <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl ${colorClasses[color]}`}>
-          {icon}
-        </div>
+        <div className="w-11 h-11 rounded-lg flex items-center justify-center bg-accent/10 text-accent">{icon}</div>
       </div>
     </div>
   );
@@ -244,7 +219,7 @@ function renderCustomLabel({ cx, cy, midAngle = 0, innerRadius, outerRadius, per
     <text
       x={x}
       y={y}
-      fill="white"
+      fill={CHART.onSlice}
       textAnchor={x > cx ? 'start' : 'end'}
       dominantBaseline="central"
       className="text-xs font-semibold"
@@ -257,10 +232,10 @@ function renderCustomLabel({ cx, cy, midAngle = 0, innerRadius, outerRadius, per
 function CustomTooltip({ active, payload }: TooltipContentProps) {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white px-4 py-2 rounded-lg shadow-lg border border-gray-200">
-        <p className="font-medium text-gray-900">{payload[0].name}</p>
-        <p className="text-sm text-gray-600">{formatCurrency(Number(payload[0].value))}</p>
-        <p className="text-xs text-gray-500">{payload[0].payload.percentage.toFixed(1)}%</p>
+      <div className="bg-panel px-4 py-2 rounded-lg shadow-lg border border-line">
+        <p className="font-medium text-ink">{payload[0].name}</p>
+        <p className="text-sm text-ink-muted">{formatCurrency(Number(payload[0].value))}</p>
+        <p className="text-xs text-ink-muted">{payload[0].payload.percentage.toFixed(1)}%</p>
       </div>
     );
   }

@@ -3,7 +3,7 @@
  * instructions go to Claude as a hidden [App note] with the same message.
  */
 
-export const CLEANUP_LABEL = '🧹 Clean up my data';
+export const CLEANUP_LABEL = 'Clean up my data';
 
 export const CLEANUP_INSTRUCTIONS = `The user pressed "Clean up my data". Review ALL their expenses and propose fixes for:
 1. Duplicates: call find_possible_duplicates. Treat a group as a duplicate only when it is clearly one charge recorded twice, which usually means the same day. Charges on different days count only for a clearly one-off purchase (the same $210 electronics order on consecutive days); routine purchases such as coffee, lunch or transit, and recurring bills, are not duplicates when the days differ. Propose deleting the extra copies and keep the earliest.

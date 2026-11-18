@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# Expense Tracker — Project Guide
+# expenseAI — Project Guide
 
 ## 1. Application type
 - **Web app, mostly client-side:** single-user, Next.js App Router.
@@ -11,16 +11,16 @@
 ## 2. Main features (`src/features/`)
 | Feature | Does | Routes |
 |---|---|---|
-| `expenses/` (core) | Data model, categories, storage, add/edit/delete, search and filter, quick add from text or a receipt photo | `/` (Expenses, Add tabs) |
-| `analytics/` | Summary, pie chart, category/vendor rankings, monthly insights (donut, top 3, streak, daily budget, Claude coach) | `/` (Dashboard tab), `/top-categories`, `/top-vendors`, `/monthly-insights` |
+| `expenses/` (core) | Data model, storage, CRUD, search/filter, quick add (text or receipt) | `/` (Expenses, Add tabs) |
+| `analytics/` | Summary, pie, category/vendor rankings, monthly insights (streak, daily budget, Claude coach) | `/` (Dashboard tab), `/top-categories`, `/top-vendors`, `/monthly-insights` |
 | `export/` | Quick CSV from the header; modal with CSV/JSON/PDF, filters, and preview | header button, Dashboard banner |
-| `assistant/` | "Ask your money" chat + one-click clean-up; tools run in the browser; edits are proposals the user approves | `/assistant`, Expenses tab |
+| `assistant/` | Chat + one-click clean-up; browser-run tools; edits are approved proposals | `/assistant`, Expenses tab |
 
 ## 3. Tech stack (`package.json`)
-- **Next.js 16.4.6** (Turbopack, `src/`). Newer than most training data: read `node_modules/next/dist/docs/` before using an unfamiliar API.
+- **Next.js 16.4.6** (Turbopack). Newer than training data: read `node_modules/next/dist/docs/` before unfamiliar APIs.
 - **React 19.2**, TypeScript 5 `strict`, `@/*` → `./src/*`.
 - **Tailwind CSS v4** via `@tailwindcss/postcss`; no `tailwind.config.js`, tokens in `globals.css` (`@theme inline`).
-- **Libraries:** Recharts 3, date-fns 4, jspdf + autotable (browser PDF), `@anthropic-ai/sdk` (server; `import type` elsewhere), zod.
+- **Libraries:** Recharts 3, date-fns 4, jspdf, lucide-react, `@anthropic-ai/sdk` (server only), zod.
 - **Lint:** ESLint 9 flat config (next core-web-vitals + typescript). **Tests:** none installed.
 
 ## 4. Code organization
@@ -71,10 +71,10 @@ docs/                      dev docs, how-tos
 - Pages hold no aggregation logic (`top-categories/page.tsx` still does; move it out when you touch it).
 
 ## 5. External systems
-- **Anthropic Claude API**, called from the server with `ANTHROPIC_API_KEY` in `.env.local` (gitignored). The key must never reach the browser.
+- **Anthropic Claude API** from the server, `ANTHROPIC_API_KEY` in `.env.local`. The key never reaches the browser.
   - All use refusal fallbacks. Quick add, receipts, coach: `beta.messages.parse` + zod, `effort: 'low'`.
-  - Text and photos go to Anthropic (the UI says so); `sanitize` re-validates output. The coach sends only aggregates.
-  - Assistant: `beta.messages.stream`, `effort: 'medium'`; the browser keeps history, runs tools, loops (max 10 steps). Tool results go to Anthropic (UI says so).
+  - Text, photos and assistant tool results go to Anthropic (the UI says so); the coach sends aggregates only. `sanitize` re-validates output.
+  - Assistant: `beta.messages.stream`, `effort: 'medium'`; the browser keeps history, runs tools, loops (max 10).
   - Claude never writes to storage: quick add prefills a form; `propose_changes` shows a card the user approves.
 - **Exports** download via a Blob link. **Fonts** (`next/font/google`) load at build time.
 - **Adding one:** route in `src/app/api/<name>/`, client in `src/integrations/<name>/`, secrets in `.env.local`. Claude routes call `limitClaudeRequest`.
@@ -88,7 +88,7 @@ npm run lint       # must stay clean
 npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 ```
 - **No deploy setup** (no Dockerfile/CI). Deploy with `next build` + `next start` (API routes need a server).
-- **Before hosting publicly,** set `APP_PASSWORD`. Claude routes are rate-limited in memory (`LIMITS`), so run one process.
+- **Before hosting publicly,** set `APP_PASSWORD`. Rate limits are in memory (`LIMITS`): run one process.
 - **Never commit `.next/`.** CI (if added): `.github/workflows/` running lint, tsc, build.
 
 ## Rules the code depends on
@@ -97,7 +97,7 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
   - `getSnapshot` must return a stable reference (cached on the raw string); never build a new array per read.
   - Server snapshot is `null` → `isLoading: true`; pages must render a loading state.
 - `getExpensesSnapshot()` reads the store outside React (assistant tools).
-- Storage is written **only on mutations**, never on load, so opening a page can't overwrite corrupt data. No "save on every change" effect.
+- Storage is written **only on mutations**, never on load (so corrupt data isn't overwritten). No "save on change" effect.
 
 **Data shape**
 - `Expense`: `id`, `date` (`yyyy-MM-dd`), `amount` (number, USD), `category`, `description`, `createdAt`/`updatedAt` (ISO).
@@ -111,7 +111,7 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 **Categories**
 - Closed union: `Food | Transportation | Entertainment | Shopping | Bills | Other`.
 - To add one, update `ExpenseCategory` **and** `EXPENSE_CATEGORIES`, `CATEGORY_COLORS`, `CATEGORY_ICONS` (tsc flags misses).
-- Never hard-code category colors or icons.
+- Never hard-code category colors (a validated dark palette) or icons.
 
 **Reuse**
 - Money uses `formatCurrency`; never `toFixed` in UI text.
@@ -129,16 +129,17 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 - Never call setState from an effect to mirror props.
 
 ## UI conventions
-- **Styling:** inline Tailwind; no CSS modules or component library.
-- **Page shell:** `min-h-screen bg-gray-50`; sticky white header with the 💸 logo (links to `/`) and "Back to Dashboard"; content in `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`; copy an existing page's spinner.
-- **Cards:** `bg-white rounded-lg shadow-sm p-6`; accent `from-blue-600 to-purple-600`.
+- **Theme:** dark only, black + teal. Use `globals.css` tokens (`bg-canvas`/`panel`, `border-line`, `text-ink*`, `bg-accent` + `text-accent-ink`), never raw grays/blues. Inline Tailwind only.
+- **Page shell:** `min-h-screen bg-canvas`, `<AppHeader />` (`app/_components/`), content `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`, an existing page's spinner.
+- **Cards:** `bg-panel border border-line rounded-lg p-6`, no shadows/gradients. Primary buttons: teal, `rounded-full`.
 - **Empty states:** handle both "no expenses" and "none in the selected range".
-- **Charts:** fixed-height wrapper around `ResponsiveContainer`; tooltips use `formatCurrency`.
-- **Dark mode:** unsupported; no `dark:` variants.
+- **Icons:** from `lib/icons.tsx` (themed lucide), never lucide directly or emoji; categories: `<CategoryIcon>`.
+- **Charts:** fixed-height wrapper around `ResponsiveContainer`; colors from `lib/chartTheme.ts`; tooltips use `formatCurrency`.
+- **No light theme:** no `dark:` variants.
 
 ## Git and workflow
 - **Branches:** `main` integrates; features on `feature/<name>`, often in worktrees (`docs/dev/worktrees.md`).
-- **Slash commands** (`.claude/commands/`): `/parallel-work`, `/integrate-parallel-work` (worktrees), `/document-feature <name>`.
+- **Slash commands:** `/parallel-work`, `/integrate-parallel-work`, `/document-feature <name>`.
 - **Commits:** imperative ("Implement Top Vendors page"); merges "Merge feature/<name>: <summary>".
 - **When to commit or push:** only when asked.
 - **Don't commit** `*.work.txt`, `INTEGRATION-REPORT.md`, mockup PNGs.

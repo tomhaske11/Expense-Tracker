@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Expense Tracker - Manage Your Finances",
-  description: "A modern expense tracking application to help you manage your personal finances with ease",
+  title: "expenseAI",
+  description: "Track spending and let Claude fill in, analyze and tidy up your expenses.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

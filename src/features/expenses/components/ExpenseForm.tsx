@@ -96,7 +96,7 @@ export default function ExpenseForm({
       {!initialData && <QuickAddInput onParsed={handleQuickAdd} />}
 
       <div>
-        <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="date" className="block text-sm font-medium text-ink-soft mb-1">
           Date
         </label>
         <input
@@ -105,15 +105,15 @@ export default function ExpenseForm({
           value={formData.date}
           onChange={(e) => handleChange('date', e.target.value)}
           max={format(new Date(), 'yyyy-MM-dd')}
-          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors.date ? 'border-red-500' : 'border-gray-300'
+          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent ${
+            errors.date ? 'border-red-500' : 'border-line'
           }`}
         />
-        {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
+        {errors.date && <p className="mt-1 text-sm text-red-400">{errors.date}</p>}
       </div>
 
       <div>
-        <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="amount" className="block text-sm font-medium text-ink-soft mb-1">
           Amount ($)
         </label>
         <input
@@ -124,22 +124,22 @@ export default function ExpenseForm({
           placeholder="0.00"
           value={formData.amount}
           onChange={(e) => handleChange('amount', e.target.value)}
-          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors.amount ? 'border-red-500' : 'border-gray-300'
+          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent ${
+            errors.amount ? 'border-red-500' : 'border-line'
           }`}
         />
-        {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount}</p>}
+        {errors.amount && <p className="mt-1 text-sm text-red-400">{errors.amount}</p>}
       </div>
 
       <div>
-        <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="category" className="block text-sm font-medium text-ink-soft mb-1">
           Category
         </label>
         <select
           id="category"
           value={formData.category}
           onChange={(e) => handleChange('category', e.target.value as ExpenseCategory)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
         >
           {EXPENSE_CATEGORIES.map((category) => (
             <option key={category} value={category}>
@@ -150,7 +150,7 @@ export default function ExpenseForm({
       </div>
 
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="description" className="block text-sm font-medium text-ink-soft mb-1">
           Description
         </label>
         <input
@@ -159,19 +159,19 @@ export default function ExpenseForm({
           placeholder="Enter expense description"
           value={formData.description}
           onChange={(e) => handleChange('description', e.target.value)}
-          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors.description ? 'border-red-500' : 'border-gray-300'
+          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent ${
+            errors.description ? 'border-red-500' : 'border-line'
           }`}
         />
         {errors.description && (
-          <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+          <p className="mt-1 text-sm text-red-400">{errors.description}</p>
         )}
       </div>
 
       <div className="flex gap-3 pt-2">
         <button
           type="submit"
-          className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium"
+          className="flex-1 bg-accent text-accent-ink py-2 px-4 rounded-lg hover:bg-accent-strong focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors font-medium focus:ring-offset-canvas"
         >
           {submitLabel}
         </button>
@@ -179,7 +179,7 @@ export default function ExpenseForm({
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors font-medium"
+            className="flex-1 bg-panel-raised text-ink-soft py-2 px-4 rounded-lg hover:bg-line focus:outline-none focus:ring-2 focus:ring-line focus:ring-offset-2 transition-colors font-medium focus:ring-offset-canvas"
           >
             Cancel
           </button>
