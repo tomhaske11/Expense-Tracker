@@ -126,6 +126,14 @@ export function useExpenses() {
     writeExpenses(() => []);
   }, []);
 
+  /**
+   * Restore from a backup in one write. 'merge' adds `incoming` to the current expenses
+   * (pass only records that aren't already present); 'replace' swaps everything for `incoming`.
+   */
+  const importExpenses = useCallback((incoming: Expense[], mode: 'merge' | 'replace') => {
+    writeExpenses((prev) => (mode === 'replace' ? [...incoming] : [...prev, ...incoming]));
+  }, []);
+
   return {
     expenses,
     isLoading,
@@ -133,5 +141,6 @@ export function useExpenses() {
     updateExpense,
     deleteExpense,
     clearAllExpenses,
+    importExpenses,
   };
 }

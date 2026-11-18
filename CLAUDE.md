@@ -5,22 +5,22 @@
 ## 1. Application type
 - **Web app, mostly client-side:** single-user, Next.js App Router.
 - **Data:** browser `localStorage` only; no database. Optional password gate (`APP_PASSWORD`).
-- **Server:** POST routes call Claude: `/api/quick-add` (text), `/api/receipt` (photo), `/api/coach`, `/api/assistant`. None store data.
+- **Server:** POST routes call Claude: `/api/quick-add`, `/api/receipt`, `/api/coach`, `/api/assistant`. None store data.
 - **Rendering:** all pages `'use client'`, prerendered static.
 
 ## 2. Main features (`src/features/`)
 | Feature | Does | Routes |
 |---|---|---|
 | `expenses/` (core) | Data model, storage, CRUD, search/filter, quick add (text or receipt) | `/` (Expenses, Add tabs) |
-| `analytics/` | Summary, pie, category/vendor rankings, monthly insights (streak, daily budget, Claude coach) | `/` (Dashboard tab), `/top-categories`, `/top-vendors`, `/monthly-insights` |
-| `export/` | Quick CSV from the header; modal with CSV/JSON/PDF, filters, and preview | header button, Dashboard banner |
+| `analytics/` | Summary, rankings, monthly insights (streak, daily budget, coach) | `/` (Dashboard tab), `/top-categories`, `/top-vendors`, `/monthly-insights` |
+| `export/` | Backup & restore (versioned JSON, reminder); CSV/JSON/PDF export modal | Dashboard panel, header |
 | `assistant/` | Chat + one-click clean-up; browser-run tools; edits are approved proposals | `/assistant`, Expenses tab |
 
 ## 3. Tech stack (`package.json`)
 - **Next.js 16.4.6** (Turbopack). Newer than training data: read `node_modules/next/dist/docs/` before unfamiliar APIs.
 - **React 19.2**, TypeScript 5 `strict`, `@/*` → `./src/*`.
 - **Tailwind CSS v4** via `@tailwindcss/postcss`; no `tailwind.config.js`, tokens in `globals.css` (`@theme inline`).
-- **Libraries:** Recharts 3, date-fns 4, jspdf, lucide-react, `@anthropic-ai/sdk` (server only), zod.
+- **Libraries:** Recharts 3, date-fns 4, jspdf, lucide-react, `@anthropic-ai/sdk` (server), zod.
 - **Lint:** ESLint 9 flat config (next core-web-vitals + typescript). **Tests:** none installed.
 
 ## 4. Code organization
@@ -45,13 +45,13 @@ src/
       hooks/useDailyBudget.ts  daily budget in localStorage
       components/          Dashboard, MonthlyInsights, BudgetCoach
     export/
-      lib/exportService.ts CSV / JSON / PDF (new export work goes here)
+      lib/exportService.ts CSV / JSON / PDF; lib/backup.ts backup format + planRestore
       lib/quickCsv.ts      legacy header-button CSV; don't extend it
       components/          ExportModal
     assistant/             CHAT AGENT: lib/ (tools.ts zod schemas, runTools.ts, protocol.ts, cleanup.ts),
       hooks/useAssistantChat.ts (tool loop), server/, components/ (AssistantTranscript is shared)
   integrations/anthropic/  server-only client, CLAUDE_MODEL ('claude-opus-5-5'), describeAnthropicError
-  lib/                     SHARED, domain-free: utils.ts; server-only session.ts, rateLimit.ts
+  lib/                     SHARED, domain-free: utils, storedValue; server-only session, rateLimit
   proxy.ts                 if APP_PASSWORD: pages → /login, /api/* → 401
 public/                    static assets
 docs/                      dev docs, how-tos
@@ -73,11 +73,11 @@ docs/                      dev docs, how-tos
 ## 5. External systems
 - **Anthropic Claude API** from the server, `ANTHROPIC_API_KEY` in `.env.local`. The key never reaches the browser.
   - All use refusal fallbacks. Quick add, receipts, coach: `beta.messages.parse` + zod, `effort: 'low'`.
-  - Text, photos and assistant tool results go to Anthropic (the UI says so); the coach sends aggregates only. `sanitize` re-validates output.
+  - Text, photos and tool results go to Anthropic (UI says so); the coach sends aggregates only. `sanitize` re-validates output.
   - Assistant: `beta.messages.stream`, `effort: 'medium'`; the browser keeps history, runs tools, loops (max 10).
   - Claude never writes to storage: quick add prefills a form; `propose_changes` shows a card the user approves.
 - **Exports** download via a Blob link. **Fonts** (`next/font/google`) load at build time.
-- **Adding one:** route in `src/app/api/<name>/`, client in `src/integrations/<name>/`, secrets in `.env.local`. Claude routes call `limitClaudeRequest`.
+- **Adding one:** route in `src/app/api/<name>/`, client in `src/integrations/<name>/`, secrets in `.env.local`; Claude routes call `limitClaudeRequest`.
 
 ## 6. Build and deploy
 ```bash
@@ -92,7 +92,7 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 - **Never commit `.next/`.** CI (if added): `.github/workflows/` running lint, tsc, build.
 
 ## Rules the code depends on
-**Data layer:** only `useExpenses` and `useDailyBudget` touch `localStorage`. For `useExpenses`:
+**Data layer:** only `useExpenses` and `createStoredValue` settings touch `localStorage`; restores use `importExpenses`. For `useExpenses`:
 - Module-level store via `useSyncExternalStore`: shared; writes notify subscribers; `storage` event syncs tabs.
   - `getSnapshot` must return a stable reference (cached on the raw string); never build a new array per read.
   - Server snapshot is `null` → `isLoading: true`; pages must render a loading state.
@@ -101,7 +101,7 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 
 **Data shape**
 - `Expense`: `id`, `date` (`yyyy-MM-dd`), `amount` (number, USD), `category`, `description`, `createdAt`/`updatedAt` (ISO).
-- **No schema version or migration.** Renaming/retyping a field breaks stored data. Add optional fields, or migrate in `readExpenses`.
+- **No storage schema version.** Renaming/retyping a field breaks stored data and backups: add optional fields, migrate in `readExpenses`, bump `BACKUP_VERSION`.
 - `description` doubles as the vendor name.
 
 **Dates**
@@ -110,7 +110,7 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 
 **Categories**
 - Closed union: `Food | Transportation | Entertainment | Shopping | Bills | Other`.
-- To add one, update `ExpenseCategory` **and** `EXPENSE_CATEGORIES`, `CATEGORY_COLORS`, `CATEGORY_ICONS` (tsc flags misses).
+- To add one, update `ExpenseCategory`, `EXPENSE_CATEGORIES`, `CATEGORY_COLORS`, `CATEGORY_ICONS` (tsc flags misses).
 - Never hard-code category colors (a validated dark palette) or icons.
 
 **Reuse**
@@ -134,7 +134,7 @@ npx tsc --noEmit   # after a build/dev run (LayoutProps types live in .next/)
 - **Cards:** `bg-panel border border-line rounded-lg p-6`, no shadows/gradients. Primary buttons: teal, `rounded-full`.
 - **Empty states:** handle both "no expenses" and "none in the selected range".
 - **Icons:** from `lib/icons.tsx` (themed lucide), never lucide directly or emoji; categories: `<CategoryIcon>`.
-- **Charts:** fixed-height wrapper around `ResponsiveContainer`; colors from `lib/chartTheme.ts`; tooltips use `formatCurrency`.
+- **Charts:** fixed-height wrapper around `ResponsiveContainer`, `lib/chartTheme.ts` colors, `formatCurrency` tooltips.
 - **No light theme:** no `dark:` variants.
 
 ## Git and workflow
