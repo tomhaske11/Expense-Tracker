@@ -48,3 +48,6 @@ INTEGRATION-REPORT.md
 
 # server-side data (bank connections)
 /.data/
+
+# but keep the template
+!.env.example

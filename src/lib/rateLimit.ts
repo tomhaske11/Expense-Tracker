@@ -5,8 +5,8 @@ import 'server-only';
  * this server process, which fits the single `next start` deployment this app uses; with
  * several instances or serverless hosting, move them to a shared store (e.g. Redis).
  *
- * Clients are keyed by the first x-forwarded-for address. That header can be spoofed unless a
- * trusted proxy sets it, so the app-wide daily cap is the backstop that bounds total spend.
+ * Clients are keyed by user id when known (signed-in API calls), otherwise by the first
+ * x-forwarded-for address. The app-wide daily cap is the backstop that bounds total spend.
  */
 
 interface Limit {
@@ -24,8 +24,6 @@ export const LIMITS = {
   claudePerDay: { max: 500, windowMs: DAY },
   /** Every route that calls Claude, all clients combined. */
   claudeGlobalPerDay: { max: 1500, windowMs: DAY },
-  /** Password attempts, per client. */
-  loginPerMinute: { max: 5, windowMs: MINUTE },
 } satisfies Record<string, Limit>;
 
 const hits = new Map<string, number[]>();
@@ -52,10 +50,11 @@ export function clientKey(request: Request): string {
  */
 export function rateLimit(
   request: Request,
-  limits: { name: keyof typeof LIMITS; global?: boolean }[]
+  limits: { name: keyof typeof LIMITS; global?: boolean }[],
+  userId?: string
 ): Response | null {
   const now = Date.now();
-  const client = clientKey(request);
+  const client = userId ? `user:${userId}` : clientKey(request);
   // Drop idle clients now and then so the map can't grow without bound.
   if (hits.size > 5000) {
     for (const [key, times] of hits) if (now - times[times.length - 1] >= DAY) hits.delete(key);
@@ -74,9 +73,9 @@ export function rateLimit(
 }
 
 /** The standard limits for a route that calls Claude. */
-export const limitClaudeRequest = (request: Request) =>
-  rateLimit(request, [
-    { name: 'claudePerMinute' },
-    { name: 'claudePerDay' },
-    { name: 'claudeGlobalPerDay', global: true },
-  ]);
+export const limitClaudeRequest = (request: Request, userId?: string) =>
+  rateLimit(
+    request,
+    [{ name: 'claudePerMinute' }, { name: 'claudePerDay' }, { name: 'claudeGlobalPerDay', global: true }],
+    userId
+  );

@@ -2,6 +2,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { ASSISTANT_MAX_BODY_BYTES, AssistantRequestSchema } from '@/features/assistant/lib/protocol';
 import { streamAssistantTurn } from '@/features/assistant/server/streamAssistantTurn';
 import { limitClaudeRequest } from '@/lib/rateLimit';
+import { requireUser } from '@/integrations/supabase/server';
 
 /**
  * POST { messages } → NDJSON stream of AssistantStreamEvents for one Claude turn.
@@ -25,7 +26,9 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Invalid conversation. Start a new chat.' }, { status: 400 });
   }
 
-  const limited = limitClaudeRequest(request);
+  const user = await requireUser(request);
+  if (user instanceof Response) return user;
+  const limited = limitClaudeRequest(request, user.id);
   if (limited) return limited;
 
   // Block-level shapes are validated by the Claude API itself.

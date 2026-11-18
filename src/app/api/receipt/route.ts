@@ -1,6 +1,7 @@
 import { ReceiptRequestSchema } from '@/features/expenses/lib/quickAdd';
 import { QuickAddError, parseReceiptImage } from '@/features/expenses/server/parseExpenseText';
 import { limitClaudeRequest } from '@/lib/rateLimit';
+import { requireUser } from '@/integrations/supabase/server';
 
 /** POST { image: { mediaType, data }, today } → ParsedExpense. Reads only; the browser saves after the user confirms. */
 export async function POST(request: Request) {
@@ -16,7 +17,9 @@ export async function POST(request: Request) {
     return Response.json({ error: 'That image is too large or not a supported type.' }, { status: 400 });
   }
 
-  const limited = limitClaudeRequest(request);
+  const user = await requireUser(request);
+  if (user instanceof Response) return user;
+  const limited = limitClaudeRequest(request, user.id);
   if (limited) return limited;
 
   try {

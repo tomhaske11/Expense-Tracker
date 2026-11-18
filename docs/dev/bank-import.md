@@ -47,13 +47,13 @@ All three routes use `limitClaudeRequest`.
 |---|---|
 | `provider.ts` | `BankProvider` interface: `createLinkToken`, `exchangePublicToken`, `sync(cursor)`, `removeItem` |
 | `mockProvider.ts` | Sandbox bank: deterministic history per access token (60 days), pending charges that post 2 days later under new ids, refunds, paychecks, card payments, a EUR charge |
-| `connectionStore.ts` | `ConnectionStore` interface + file implementation (`.data/bank-connections.json`, mode 600, gitignored); AES-256-GCM token sealing |
+| `connectionStore.ts` | `ConnectionStore` interface; Supabase implementation (`bank_connections`, secret key, filtered by user) when `SUPABASE_SECRET_KEY` is set, file fallback (`.data/`) otherwise; AES-256-GCM token sealing |
 | `index.ts` | `getBankProvider()` from `BANK_PROVIDER` (default `mock`) |
 
 Routes (`src/app/api/bank/`): `link`, `exchange`, `connections` (GET, DELETE `?id=`), `sync`,
 `ack`. Responses never include access tokens. The stored cursor only advances on `ack`, so a
-cancelled review is offered again. Connections are keyed by `getUserId()` (`lib/session.ts`,
-`'owner'` until real accounts exist).
+cancelled review is offered again. Connections belong to the verified user (`requireUser()`),
+which accepts a session cookie or a Bearer access token.
 
 ### Environment
 
@@ -72,9 +72,8 @@ cancelled review is offered again. Connections are keyed by `getUserId()` (`lib/
 2. Register it in `getBankProvider()`; secrets go in `.env.local`; set `BANK_TOKEN_KEY`.
 3. In `ImportCenter`, open the provider's own widget (e.g. Plaid Link with the link token)
    instead of the sandbox `ConnectDialog`, and pass its public token to `finishLink()`.
-4. Before going multi-user: replace `FileConnectionStore` with a database-backed
-   `ConnectionStore`, make `getUserId()` return the signed-in user, and handle provider
-   webhooks to sync in the background.
+4. Handle the provider's webhooks to sync in the background (connections already live in
+   Supabase per user; see `docs/dev/accounts.md`).
 
 ## Tests
 

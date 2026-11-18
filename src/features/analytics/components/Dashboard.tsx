@@ -21,6 +21,7 @@ import {
 } from 'recharts';
 import ExportModal from '@/features/export/components/ExportModal';
 import BackupPanel from '@/features/export/components/BackupPanel';
+import LocalDataImport from '@/features/export/components/LocalDataImport';
 import { useDailyBudget } from '@/features/analytics/hooks/useDailyBudget';
 
 interface DashboardProps {
@@ -57,6 +58,8 @@ export default function Dashboard({ expenses }: DashboardProps) {
   return (
     <>
       <div className="space-y-6">
+        <LocalDataImport expenses={expenses} />
+
         <BackupPanel
           expenses={expenses}
           dailyBudget={dailyBudget}

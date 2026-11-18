@@ -7,6 +7,7 @@ import {
   ChartPie,
   Check,
   ChevronDown,
+  CircleUser,
   CircleCheck,
   Clapperboard,
   Download,
@@ -78,6 +79,7 @@ export const DownloadIcon = themed(Download, 'Download');
 export const ArrowLeftIcon = themed(ArrowLeft, 'ArrowLeft');
 export const LogOutIcon = themed(LogOut, 'LogOut');
 export const BankIcon = themed(Landmark, 'Bank');
+export const UserIcon = themed(CircleUser, 'User');
 export const UploadIcon = themed(Upload, 'Upload');
 
 // Stats

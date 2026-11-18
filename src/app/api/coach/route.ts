@@ -1,6 +1,7 @@
 import { CoachSummarySchema } from '@/features/analytics/lib/coach';
 import { CoachError, getCoachInsights } from '@/features/analytics/server/coachInsights';
 import { limitClaudeRequest } from '@/lib/rateLimit';
+import { requireUser } from '@/integrations/supabase/server';
 
 /** POST CoachSummary (aggregates only, no individual expenses) → CoachInsights. */
 export async function POST(request: Request) {
@@ -16,7 +17,9 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Invalid spending summary.' }, { status: 400 });
   }
 
-  const limited = limitClaudeRequest(request);
+  const user = await requireUser(request);
+  if (user instanceof Response) return user;
+  const limited = limitClaudeRequest(request, user.id);
   if (limited) return limited;
 
   try {
