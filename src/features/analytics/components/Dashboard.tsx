@@ -7,7 +7,7 @@ import { getCurrentMonthExpenses } from '@/features/expenses/lib/filters';
 import { calculateCategoryBreakdown } from '@/features/analytics/lib/stats';
 import { CATEGORY_COLORS } from '@/features/expenses/constants';
 import CategoryIcon from '@/features/expenses/components/CategoryIcon';
-import { BoxIcon, CalendarIcon, DownloadIcon, TrendIcon, WalletIcon } from '@/lib/icons';
+import { BoxIcon, CalendarIcon, TrendIcon, WalletIcon } from '@/lib/icons';
 import { CHART } from '@/lib/chartTheme';
 import {
   PieChart,
@@ -20,6 +20,8 @@ import {
   type TooltipContentProps,
 } from 'recharts';
 import ExportModal from '@/features/export/components/ExportModal';
+import BackupPanel from '@/features/export/components/BackupPanel';
+import { useDailyBudget } from '@/features/analytics/hooks/useDailyBudget';
 
 interface DashboardProps {
   expenses: Expense[];
@@ -27,6 +29,7 @@ interface DashboardProps {
 
 export default function Dashboard({ expenses }: DashboardProps) {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const { dailyBudget, setDailyBudget } = useDailyBudget();
   const summary = useMemo(() => {
     const totalSpending = expenses.reduce((sum, expense) => sum + expense.amount, 0);
     const monthlyExpenses = getCurrentMonthExpenses(expenses);
@@ -54,23 +57,12 @@ export default function Dashboard({ expenses }: DashboardProps) {
   return (
     <>
       <div className="space-y-6">
-        {/* Export banner */}
-        {expenses.length > 0 && (
-          <div className="bg-panel border border-line rounded-lg p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-semibold text-ink mb-1">Export your data</h3>
-              <p className="text-ink-muted text-sm">CSV, JSON or PDF, with filters and a preview.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsExportModalOpen(true)}
-              className="px-5 py-2.5 bg-accent text-accent-ink rounded-full hover:bg-accent-strong transition-colors font-medium flex items-center justify-center gap-2"
-            >
-              <DownloadIcon />
-              Export data
-            </button>
-          </div>
-        )}
+        <BackupPanel
+          expenses={expenses}
+          dailyBudget={dailyBudget}
+          onRestoreBudget={setDailyBudget}
+          onOpenExport={() => setIsExportModalOpen(true)}
+        />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

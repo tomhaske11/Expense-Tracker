@@ -123,7 +123,7 @@ export class ExportService {
     }
   }
 
-  private static downloadFile(content: string, filename: string, mimeType: string): void {
+  static downloadFile(content: string, filename: string, mimeType: string): void {
     const blob = new Blob([content], { type: `${mimeType};charset=utf-8;` });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
