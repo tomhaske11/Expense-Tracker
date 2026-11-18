@@ -27,4 +27,7 @@ export const CATEGORY_ICONS: Record<ExpenseCategory, string> = {
   Other: '📦',
 };
 
+/** Max characters accepted by natural-language quick add. */
+export const QUICK_ADD_MAX_LENGTH = 300;
+
 export const STORAGE_KEY = 'expense-tracker-data';

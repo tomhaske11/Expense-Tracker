@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { ExpenseFormData, ExpenseCategory, Expense } from '@/features/expenses/types';
 import { EXPENSE_CATEGORIES } from '@/features/expenses/constants';
 import { format } from 'date-fns';
+import QuickAddInput from '@/features/expenses/components/QuickAddInput';
+import type { ParsedExpense } from '@/features/expenses/lib/quickAdd';
 
 interface ExpenseFormProps {
   onSubmit: (data: ExpenseFormData) => void;
@@ -79,8 +81,20 @@ export default function ExpenseForm({
     }
   };
 
+  const handleQuickAdd = (parsed: ParsedExpense) => {
+    setFormData((prev) => ({
+      date: parsed.date,
+      amount: parsed.amount !== null ? parsed.amount.toFixed(2) : prev.amount,
+      category: parsed.category,
+      description: parsed.description || prev.description,
+    }));
+    setErrors({});
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {!initialData && <QuickAddInput onParsed={handleQuickAdd} />}
+
       <div>
         <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
           Date
