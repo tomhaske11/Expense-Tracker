@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scratch notes from parallel-work sessions (never commit)
+*.work.txt
+INTEGRATION-REPORT.md
