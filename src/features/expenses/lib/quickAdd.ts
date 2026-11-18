@@ -35,3 +35,17 @@ export const ParsedExpenseSchema = z.object({
 export type ParsedExpense = z.infer<typeof ParsedExpenseSchema>;
 
 export const isIsoDay = (value: string) => ISO_DAY.test(value);
+
+/** Image types Claude accepts. The browser re-encodes receipts as JPEG before upload. */
+export const RECEIPT_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
+/** Max base64 length of an uploaded receipt (~3.75 MB of image data). */
+export const RECEIPT_MAX_BASE64_LENGTH = 5_000_000;
+
+export const ReceiptRequestSchema = z.object({
+  image: z.object({
+    mediaType: z.enum(RECEIPT_MEDIA_TYPES),
+    data: z.string().min(1).max(RECEIPT_MAX_BASE64_LENGTH).regex(/^[A-Za-z0-9+/]+={0,2}$/),
+  }),
+  today: z.string().regex(ISO_DAY),
+});
+export type ReceiptRequest = z.infer<typeof ReceiptRequestSchema>;
