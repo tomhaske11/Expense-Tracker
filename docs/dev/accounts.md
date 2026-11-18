@@ -57,7 +57,5 @@ header. RLS covers direct database access the same way in both clients.
 - `revoke ... from anon` in the migration didn't seem to take effect on the first project
   (anonymous reads return `[]` rather than "permission denied"). RLS still returns no rows and
   blocks writes; check `\dp public.expenses` in the SQL Editor and re-apply if needed.
-- Rate limits are still in memory: move them to Redis (e.g. Upstash) before running multiple
-  instances on Vercel.
 - A deleted user's existing access token stays valid until it expires (~1 hour); every query
   then fails RLS because the user no longer owns rows.

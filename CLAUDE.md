@@ -59,7 +59,7 @@ src/
   integrations/
     anthropic/             server-only Claude client, CLAUDE_MODEL ('claude-opus-5-5'), describeAnthropicError
     supabase/              env.ts, browser.ts (browser client), server.ts (requireUser, admin client)
-  lib/                     SHARED, domain-free: utils.ts, icons.tsx, chartTheme.ts; server-only rateLimit.ts
+  lib/                     SHARED, domain-free: utils.ts, icons.tsx, chartTheme.ts; server-only rateLimit.ts (Upstash Redis REST)
   proxy.ts                 Supabase session refresh + gate: pages → /login, /api/* → 401
 supabase/migrations/       SQL schema (tables, RLS, grants, realtime)
 public/                    static assets
@@ -90,7 +90,7 @@ docs/dev/, docs/user/      implementation docs (accounts, bank import, ...) and 
   - All calls use server-side refusal fallbacks. Quick add, receipts, coach and imports: `beta.messages.parse` with a zod schema, `effort: 'low'`. Assistant: `beta.messages.stream`, `effort: 'medium'`; the browser keeps the history, runs the tools and loops (max 10 steps).
   - User text, photos, assistant tool results and import descriptions are sent to Anthropic; the UI says so in each place. The coach sends aggregates only. Server code re-validates Claude's output (`sanitize`).
   - Claude never writes data directly: quick add prefills a form; `propose_changes` shows a card the user approves; imports are reviewed before saving.
-  - Claude routes call `limitClaudeRequest(request, user.id)` (per-user limits, in memory: move to Redis before scaling to multiple instances).
+  - Claude routes call `await limitClaudeRequest(request, user.id)`: per-user and app-wide limits, counted in Upstash Redis (`KV_REST_API_URL` / `KV_REST_API_TOKEN`) so they hold across Vercel instances; in memory when those aren't set. If Redis is unreachable in production, Claude features pause (503) rather than run unlimited.
 - **Banks:** `BANK_PROVIDER` (`mock` only so far). Tokens are stored server-side in `bank_connections`, encrypted with `BANK_TOKEN_KEY` (required for live providers). Details: `docs/dev/bank-import.md`.
 - **Exports** download through a Blob link. **Fonts** (`next/font/google`) are fetched at build time.
 

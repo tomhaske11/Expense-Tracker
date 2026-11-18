@@ -1,12 +1,18 @@
 import 'server-only';
 
 /*
- * In-memory rate limiting for the routes that spend the Anthropic API key. Counters live in
- * this server process, which fits the single `next start` deployment this app uses; with
- * several instances or serverless hosting, move them to a shared store (e.g. Redis).
+ * Rate limits for the routes that spend the Anthropic API key.
+ *
+ * In production the counters live in Upstash Redis, shared by every Vercel function instance
+ * (instances start and stop constantly, so in-memory counters would neither be shared nor
+ * survive). Without Redis credentials (local development) an in-memory store is used.
+ *
+ * Fixed windows: one counter per client and window (e.g. per minute), created with INCR and
+ * expired with PEXPIRE, all limits checked in one Redis round trip. A burst at a window
+ * boundary can briefly allow up to 2x the limit; the app-wide daily cap still bounds spend.
  *
  * Clients are keyed by user id when known (signed-in API calls), otherwise by the first
- * x-forwarded-for address. The app-wide daily cap is the backstop that bounds total spend.
+ * x-forwarded-for address.
  */
 
 interface Limit {
@@ -26,47 +32,109 @@ export const LIMITS = {
   claudeGlobalPerDay: { max: 1500, windowMs: DAY },
 } satisfies Record<string, Limit>;
 
-const hits = new Map<string, number[]>();
-
-/** Record a hit for `key` under `limit`. Returns seconds to wait if the limit is exceeded. */
-function hit(key: string, limit: Limit, now: number): number | null {
-  const recent = (hits.get(key) ?? []).filter((time) => now - time < limit.windowMs);
-  if (recent.length >= limit.max) {
-    hits.set(key, recent);
-    return Math.max(1, Math.ceil((recent[0] + limit.windowMs - now) / 1000));
-  }
-  recent.push(now);
-  hits.set(key, recent);
-  return null;
+type LimitName = keyof typeof LIMITS;
+interface Check {
+  key: string;
+  limit: Limit;
+  windowEnd: number;
 }
+
+// ---------- Stores ----------
+
+/** Increment each key and return the new counts, in order. */
+type CounterStore = (checks: Check[], now: number) => Promise<number[]>;
+
+/** Upstash REST credentials: Vercel's integration uses KV_* names; Upstash's own use UPSTASH_REDIS_*. */
+function redisConfig(): { url: string; token: string } | null {
+  const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
+  return url && token ? { url: url.replace(/\/$/, ''), token } : null;
+}
+
+export const isSharedRateLimit = () => redisConfig() !== null;
+
+const redisStore: CounterStore = async (checks) => {
+  const config = redisConfig()!;
+  // One pipeline: INCR + PEXPIRE per key. Expiry is the window length, so keys clean themselves up.
+  const commands = checks.flatMap((c) => [
+    ['INCR', c.key],
+    ['PEXPIRE', c.key, String(c.limit.windowMs)],
+  ]);
+  const res = await fetch(`${config.url}/pipeline`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${config.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(commands),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`Redis responded ${res.status}`);
+  const results = (await res.json()) as { result?: unknown; error?: string }[];
+  return checks.map((_, i) => {
+    const r = results[i * 2];
+    if (r?.error || typeof r?.result !== 'number') throw new Error(`Redis INCR failed: ${r?.error ?? 'no result'}`);
+    return r.result;
+  });
+};
+
+const memory = new Map<string, { count: number; expires: number }>();
+const memoryStore: CounterStore = async (checks, now) => {
+  if (memory.size > 5000) for (const [k, v] of memory) if (v.expires <= now) memory.delete(k);
+  return checks.map((c) => {
+    const entry = memory.get(c.key);
+    const next = entry && entry.expires > now ? { ...entry, count: entry.count + 1 } : { count: 1, expires: c.windowEnd };
+    memory.set(c.key, next);
+    return next.count;
+  });
+};
+
+// ---------- Limiting ----------
 
 export function clientKey(request: Request): string {
   return request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local';
 }
 
-/**
- * Check `limits` in order for this request (each named limit is counted separately).
- * Returns a 429 response to send back, or null if the request may proceed.
- */
-export function rateLimit(
-  request: Request,
-  limits: { name: keyof typeof LIMITS; global?: boolean }[],
-  userId?: string
-): Response | null {
-  const now = Date.now();
-  const client = userId ? `user:${userId}` : clientKey(request);
-  // Drop idle clients now and then so the map can't grow without bound.
-  if (hits.size > 5000) {
-    for (const [key, times] of hits) if (now - times[times.length - 1] >= DAY) hits.delete(key);
-  }
-  for (const { name, global } of limits) {
-    const retryAfter = hit(global ? `${name}:all` : `${name}:${client}`, LIMITS[name], now);
-    if (retryAfter !== null) {
-      const message =
-        LIMITS[name].windowMs >= DAY
+const tooMany = (windowMs: number, retryAfterSeconds: number) =>
+  Response.json(
+    {
+      error:
+        windowMs >= DAY
           ? "Today's limit for Claude features has been reached. Please try again tomorrow."
-          : 'Too many requests. Please wait a moment and try again.';
-      return Response.json({ error: message }, { status: 429, headers: { 'Retry-After': String(retryAfter) } });
+          : 'Too many requests. Please wait a moment and try again.',
+    },
+    { status: 429, headers: { 'Retry-After': String(Math.max(1, retryAfterSeconds)) } }
+  );
+
+/**
+ * Count this request against `limits` (each counted separately). Returns a 429 response to send
+ * back, or null if the request may proceed. If the shared store is unreachable in production,
+ * Claude features are paused (fail closed) rather than left unlimited.
+ */
+export async function rateLimit(
+  request: Request,
+  limits: { name: LimitName; global?: boolean }[],
+  userId?: string,
+  now = Date.now()
+): Promise<Response | null> {
+  const client = userId ? `user:${userId}` : clientKey(request);
+  const checks: Check[] = limits.map(({ name, global }) => {
+    const limit = LIMITS[name];
+    const window = Math.floor(now / limit.windowMs);
+    return { key: `rl:${name}:${global ? 'all' : client}:${window}`, limit, windowEnd: (window + 1) * limit.windowMs };
+  });
+
+  let counts: number[];
+  try {
+    counts = await (isSharedRateLimit() ? redisStore : memoryStore)(checks, now);
+  } catch (error) {
+    console.error('Rate limit store failed:', error);
+    if (process.env.VERCEL_ENV === 'production') {
+      return Response.json({ error: 'Claude features are temporarily unavailable. Please try again shortly.' }, { status: 503 });
+    }
+    return null;
+  }
+
+  for (let i = 0; i < checks.length; i++) {
+    if (counts[i] > checks[i].limit.max) {
+      return tooMany(checks[i].limit.windowMs, Math.ceil((checks[i].windowEnd - now) / 1000));
     }
   }
   return null;
@@ -74,8 +142,4 @@ export function rateLimit(
 
 /** The standard limits for a route that calls Claude. */
 export const limitClaudeRequest = (request: Request, userId?: string) =>
-  rateLimit(
-    request,
-    [{ name: 'claudePerMinute' }, { name: 'claudePerDay' }, { name: 'claudeGlobalPerDay', global: true }],
-    userId
-  );
+  rateLimit(request, [{ name: 'claudePerMinute' }, { name: 'claudePerDay' }, { name: 'claudeGlobalPerDay', global: true }], userId);

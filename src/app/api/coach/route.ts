@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
   const user = await requireUser(request);
   if (user instanceof Response) return user;
-  const limited = limitClaudeRequest(request, user.id);
+  const limited = await limitClaudeRequest(request, user.id);
   if (limited) return limited;
 
   try {
