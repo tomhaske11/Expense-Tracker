@@ -1,5 +1,6 @@
 import { CoachSummarySchema } from '@/features/analytics/lib/coach';
 import { CoachError, getCoachInsights } from '@/features/analytics/server/coachInsights';
+import { limitClaudeRequest } from '@/lib/rateLimit';
 
 /** POST CoachSummary (aggregates only, no individual expenses) → CoachInsights. */
 export async function POST(request: Request) {
@@ -14,6 +15,9 @@ export async function POST(request: Request) {
   if (!input.success) {
     return Response.json({ error: 'Invalid spending summary.' }, { status: 400 });
   }
+
+  const limited = limitClaudeRequest(request);
+  if (limited) return limited;
 
   try {
     return Response.json(await getCoachInsights(input.data));
