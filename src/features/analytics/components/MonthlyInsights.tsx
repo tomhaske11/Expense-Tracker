@@ -1,22 +1,36 @@
 'use client';
 
-import { useMemo } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Expense } from '@/features/expenses/types';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/features/expenses/constants';
 import { formatCurrency } from '@/lib/utils';
 import { getCurrentMonthExpenses } from '@/features/expenses/lib/filters';
-import { calculateBudgetStreak, calculateCategoryBreakdown } from '@/features/analytics/lib/stats';
+import { calculateBudgetStreak, calculateCategoryBreakdown, suggestDailyBudget } from '@/features/analytics/lib/stats';
+import { useDailyBudget } from '@/features/analytics/hooks/useDailyBudget';
+import BudgetCoach from '@/features/analytics/components/BudgetCoach';
 
 interface MonthlyInsightsProps {
   expenses: Expense[];
-  /** A day counts toward the streak when total spending that day is at or below this amount. */
-  dailyBudget?: number;
   /** Streak length that fills the progress pill. */
   streakGoal?: number;
 }
 
-export default function MonthlyInsights({ expenses, dailyBudget = 50, streakGoal = 30 }: MonthlyInsightsProps) {
+export default function MonthlyInsights({ expenses, streakGoal = 30 }: MonthlyInsightsProps) {
+  // A day counts toward the streak when total spending that day is at or below this amount.
+  const { dailyBudget, setDailyBudget } = useDailyBudget();
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [budgetInput, setBudgetInput] = useState('');
+  const suggestion = useMemo(() => suggestDailyBudget(expenses), [expenses]);
+
+  const saveBudget = (event: FormEvent) => {
+    event.preventDefault();
+    const amount = Number(budgetInput);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    setDailyBudget(amount);
+    setEditingBudget(false);
+  };
+
   const { breakdown, monthlyTotal } = useMemo(() => {
     const monthly = getCurrentMonthExpenses(expenses);
     return {
@@ -124,6 +138,61 @@ export default function MonthlyInsights({ expenses, dailyBudget = 50, streakGoal
           </p>
         </div>
       </div>
+
+      {/* Daily budget */}
+      <div className="mt-3 text-sm text-gray-700 text-center space-y-2">
+        {editingBudget ? (
+          <form onSubmit={saveBudget} className="flex items-center justify-center gap-2">
+            <label htmlFor="daily-budget">Daily budget $</label>
+            <input
+              id="daily-budget"
+              type="number"
+              inputMode="decimal"
+              min="1"
+              step="0.01"
+              value={budgetInput}
+              onChange={(e) => setBudgetInput(e.target.value)}
+              autoFocus
+              className="w-24 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button type="submit" className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              Save
+            </button>
+            <button type="button" onClick={() => setEditingBudget(false)} className="px-2 py-1 text-gray-600 hover:text-gray-900">
+              Cancel
+            </button>
+          </form>
+        ) : (
+          <p>
+            Daily budget: <span className="font-semibold">{formatCurrency(dailyBudget)}</span>{' '}
+            <button
+              type="button"
+              onClick={() => {
+                setBudgetInput(String(dailyBudget));
+                setEditingBudget(true);
+              }}
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              Change
+            </button>
+          </p>
+        )}
+        {suggestion && suggestion.amount !== dailyBudget && !editingBudget && (
+          <p className="text-gray-600">
+            💡 Based on your last {suggestion.basisDays} days, {formatCurrency(suggestion.amount)}/day is one you met on{' '}
+            {Math.round(suggestion.hitRate * 100)}% of days.{' '}
+            <button
+              type="button"
+              onClick={() => setDailyBudget(suggestion.amount)}
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              Use {formatCurrency(suggestion.amount)}
+            </button>
+          </p>
+        )}
+      </div>
+
+      <BudgetCoach expenses={expenses} dailyBudget={dailyBudget} />
     </section>
   );
 }
