@@ -43,3 +43,5 @@ next-env.d.ts
 # scratch notes from parallel-work sessions (never commit)
 *.work.txt
 INTEGRATION-REPORT.md
+# design mockups kept locally (never commit)
+/*.png
