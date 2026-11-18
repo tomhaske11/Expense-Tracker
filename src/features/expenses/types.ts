@@ -14,6 +14,21 @@ export interface Expense {
   description: string;
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
+  /** Where the expense came from. Absent on manual entries (and on data saved before imports existed). */
+  source?: ExpenseSource;
+}
+
+/** Origin of an imported expense, so re-imports and re-syncs never add it twice. */
+export interface ExpenseSource {
+  kind: 'file' | 'bank';
+  /** The transaction's id at the source (bank transaction id, or a hash for file rows). */
+  externalId: string;
+  /** Bank connection, for kind 'bank'. */
+  connectionId?: string;
+  /** Account within the connection or statement. */
+  accountId?: string;
+  /** The description exactly as the bank or statement gave it, for matching later imports. */
+  rawDescription?: string;
 }
 
 export interface ExpenseFormData {

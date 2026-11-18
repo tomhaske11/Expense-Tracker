@@ -48,3 +48,12 @@ export async function isCorrectPassword(password: string): Promise<boolean> {
   const [given, wanted] = await Promise.all([hmacHex('pw', password), hmacHex('pw', expected)]);
   return safeEqual(given, wanted);
 }
+
+/**
+ * The signed-in user's id, for per-user server data such as bank connections. With the single
+ * APP_PASSWORD gate there is one user; real accounts will return their user id here.
+ */
+export function getUserId(request: Request): string {
+  void request;
+  return 'owner';
+}

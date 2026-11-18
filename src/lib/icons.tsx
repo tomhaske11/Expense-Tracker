@@ -12,6 +12,7 @@ import {
   Download,
   Eye,
   FileText,
+  Landmark,
   Lightbulb,
   List,
   LogOut,
@@ -28,6 +29,7 @@ import {
   Store,
   Trash2,
   TrendingUp,
+  Upload,
   TriangleAlert,
   Trophy,
   Utensils,
@@ -75,6 +77,8 @@ export const ChatIcon = themed(MessageSquare, 'Chat');
 export const DownloadIcon = themed(Download, 'Download');
 export const ArrowLeftIcon = themed(ArrowLeft, 'ArrowLeft');
 export const LogOutIcon = themed(LogOut, 'LogOut');
+export const BankIcon = themed(Landmark, 'Bank');
+export const UploadIcon = themed(Upload, 'Upload');
 
 // Stats
 export const WalletIcon = themed(Wallet, 'Wallet');

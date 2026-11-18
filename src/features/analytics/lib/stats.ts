@@ -1,6 +1,7 @@
 import { format, parseISO, startOfDay, subDays, differenceInCalendarDays } from 'date-fns';
 import { Expense, ExpenseCategory } from '@/features/expenses/types';
 import { VendorStats } from '@/features/analytics/types';
+import { normalizeVendor } from '@/lib/utils';
 
 export function calculateCategoryBreakdown(expenses: Expense[]) {
   const categoryTotals: Record<string, number> = {};
@@ -194,19 +195,6 @@ export function findRepeatedCharges(expenses: Expense[]): { vendor: string; amou
     .sort((a, b) => b.amount * b.count - a.amount * a.count);
 }
 
-/**
- * A vendor name reduced for matching: lower case, store numbers and punctuation removed
- * ("CHIPOTLE #1234" and "Chipotle" both become "chipotle").
- */
-export function normalizeVendor(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/#\s*\d+/g, ' ')
-    .replace(/[^a-z0-9& ]+/g, ' ')
-    .replace(/\b\d+\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 /** Every distinct vendor (description) with usage, sorted by normalized name so variants sit together. */
 export function listVendors(expenses: Expense[]) {
