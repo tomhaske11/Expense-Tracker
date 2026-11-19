@@ -1,24 +1,57 @@
-import { format, parseISO, startOfDay, subDays, differenceInCalendarDays } from 'date-fns';
+import { format, parseISO, startOfDay, subDays, subMonths, differenceInCalendarDays, getDate, getDaysInMonth } from 'date-fns';
 import { Expense, ExpenseCategory } from '@/features/expenses/types';
 import { VendorStats } from '@/features/analytics/types';
 import { normalizeVendor } from '@/lib/utils';
 
+/** Spending per category, largest first, with each category's share, transaction count and average. */
 export function calculateCategoryBreakdown(expenses: Expense[]) {
-  const categoryTotals: Record<string, number> = {};
+  const totals = new Map<ExpenseCategory, { amount: number; count: number }>();
   let total = 0;
 
-  expenses.forEach((expense) => {
-    categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.amount;
+  for (const expense of expenses) {
+    const entry = totals.get(expense.category) ?? { amount: 0, count: 0 };
+    entry.amount += expense.amount;
+    entry.count++;
+    totals.set(expense.category, entry);
     total += expense.amount;
-  });
+  }
 
-  return Object.entries(categoryTotals)
-    .map(([category, amount]) => ({
-      category: category as ExpenseCategory,
+  return [...totals.entries()]
+    .map(([category, { amount, count }]) => ({
+      category,
       amount,
+      count,
+      average: amount / count,
       percentage: total > 0 ? (amount / total) * 100 : 0,
     }))
     .sort((a, b) => b.amount - a.amount);
+}
+
+/** The current month so far: its expenses and totals, plus last month's total for comparison. */
+export function calculateMonthToDate(expenses: Expense[], today = new Date()) {
+  const thisKey = format(today, 'yyyy-MM');
+  const lastKey = format(subMonths(today, 1), 'yyyy-MM');
+  const thisMonth = expenses.filter((e) => e.date.startsWith(thisKey));
+  const lastMonthTotal = expenses.filter((e) => e.date.startsWith(lastKey)).reduce((sum, e) => sum + e.amount, 0);
+  const total = thisMonth.reduce((sum, e) => sum + e.amount, 0);
+  const daysElapsed = getDate(today);
+  return {
+    label: format(today, 'MMMM yyyy'),
+    expenses: thisMonth,
+    total,
+    count: thisMonth.length,
+    dailyAverage: total / daysElapsed,
+    daysElapsed,
+    daysInMonth: getDaysInMonth(today),
+    lastMonthLabel: format(subMonths(today, 1), 'MMMM'),
+    lastMonthTotal,
+  };
+}
+
+/** Total and count of a list of expenses. */
+export function summarize(expenses: Expense[]) {
+  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  return { total, count: expenses.length, average: expenses.length > 0 ? total / expenses.length : 0 };
 }
 
 export function calculateVendorStats(expenses: Expense[]): VendorStats[] {

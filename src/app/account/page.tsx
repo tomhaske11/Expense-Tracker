@@ -4,7 +4,10 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowser } from '@/integrations/supabase/browser';
 import { useExpenses } from '@/features/expenses/hooks/useExpenses';
-import AppHeader from '@/app/_components/AppHeader';
+import AppShell from '@/app/_components/AppShell';
+import BackupPanel from '@/features/export/components/BackupPanel';
+import ExportModal from '@/features/export/components/ExportModal';
+import { useDailyBudget } from '@/features/analytics/hooks/useDailyBudget';
 import { INPUT, LABEL } from '@/app/_components/AuthCard';
 import { LogOutIcon, TrashIcon } from '@/lib/icons';
 
@@ -13,7 +16,9 @@ const BUTTON = 'px-4 py-2 rounded-full text-sm font-medium transition-colors dis
 
 export default function AccountPage() {
   const router = useRouter();
-  const { expenses } = useExpenses();
+  const { expenses, isLoading } = useExpenses();
+  const { dailyBudget, setDailyBudget } = useDailyBudget();
+  const [exportOpen, setExportOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [passwordNote, setPasswordNote] = useState<string | null>(null);
@@ -63,9 +68,7 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <AppHeader />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <AppShell loading={isLoading}>
         <div className="max-w-xl mx-auto space-y-6">
           <h1 className="text-2xl font-semibold text-ink">Account</h1>
 
@@ -78,6 +81,13 @@ export default function AccountPage() {
               Sign out
             </button>
           </section>
+
+          <BackupPanel
+            expenses={expenses}
+            dailyBudget={dailyBudget}
+            onRestoreBudget={setDailyBudget}
+            onOpenExport={() => setExportOpen(true)}
+          />
 
           <section className={CARD}>
             <h2 className="text-lg font-semibold text-ink mb-3">Change password</h2>
@@ -97,7 +107,7 @@ export default function AccountPage() {
             <h2 className="text-lg font-semibold text-ink mb-1">Delete account</h2>
             <p className="text-sm text-ink-muted mb-3">
               Permanently deletes your account, all {expenses.length} expenses, your settings and any bank connections. This
-              can&apos;t be undone; download a backup from the Dashboard first if you want a copy.
+              can&apos;t be undone; download a backup above first if you want a copy.
             </p>
             <label htmlFor="confirm-delete" className={LABEL}>Type DELETE to confirm</label>
             <input id="confirm-delete" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} className={INPUT} />
@@ -113,7 +123,7 @@ export default function AccountPage() {
             </button>
           </section>
         </div>
-      </main>
-    </div>
+        <ExportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} expenses={expenses} />
+    </AppShell>
   );
 }

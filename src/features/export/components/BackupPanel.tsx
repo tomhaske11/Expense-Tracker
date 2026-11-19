@@ -92,9 +92,9 @@ export default function BackupPanel({ expenses, dailyBudget, onRestoreBudget, on
     <div
       className="bg-panel border border-line rounded-lg p-6"
     >
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-ink mb-1">{empty ? 'Restore a backup' : 'Back up & export'}</h3>
+          <h3 className="text-lg font-semibold text-ink mb-1">{empty ? 'Restore a backup' : 'Your data'}</h3>
           <p className="text-sm text-ink-muted">
             {empty
               ? 'Have an expenseAI backup file? Restore it into your account.'

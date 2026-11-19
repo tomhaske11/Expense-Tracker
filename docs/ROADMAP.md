@@ -22,12 +22,12 @@ and understand their spending. Freemium: free tier with usage caps, paid tier.
 | Bank and statement import pipeline (sandbox bank) | 2026-11-18 | #13 |
 | Accounts and server-side data (Supabase) | 2026-11-18 | #14 |
 | Production deploy on Vercel (expenseai-omega.vercel.app) | 2026-11-18 | — |
+| Shared Claude rate limits (Upstash Redis) | 2026-11-18 | #15 |
 
 ## Production readiness
 
 | Status | Item | Notes |
 |---|---|---|
-| 🚧 | Shared rate limits (Upstash Redis) | Built and tested against Upstash; PR pending |
 | ⏭️ | Anthropic monthly spend limit | Console setting; hard cap on the bill |
 | 📋 | Transactional email provider (e.g. Resend) | Supabase's built-in email is heavily rate-limited |
 | 📋 | Tests and CI | Vitest + Playwright (port the ad-hoc scripts); GitHub Actions on every PR |
@@ -67,6 +67,7 @@ and understand their spending. Freemium: free tier with usage caps, paid tier.
 
 | Status | Item | Notes |
 |---|---|---|
+| 🚧 | Navigation redesign: one place per job | Home · Transactions · Spending · Ask · Add · Account; mobile tab bar |
 | 📋 | Subscriptions and recurring-charges view | Yearly cost, price increases |
 | 📋 | Category budgets with month-end forecast | "Food: $310 of $400, on pace for $520" |
 | 📋 | Weekly coach digest (email or push) | Brings users back |
