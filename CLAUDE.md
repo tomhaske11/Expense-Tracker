@@ -11,11 +11,11 @@
 ## 2. Main features (`src/features/`)
 | Feature | Does | Routes |
 |---|---|---|
-| `expenses/` (core) | Data model, the Supabase-backed store, CRUD, search/filter, quick add (text or receipt photo) | `/` (Expenses, Add tabs) |
-| `analytics/` | Summary and pie chart, category/vendor rankings, monthly insights (streak, daily budget, Claude coach) | `/` (Dashboard), `/top-categories`, `/top-vendors`, `/monthly-insights` |
-| `export/` | Backup download and restore (versioned JSON), CSV/JSON/PDF export modal, one-time import of pre-accounts browser data | Dashboard panels, header |
+| `expenses/` (core) | Data model, the Supabase-backed store, CRUD, search/filter, quick add (text or receipt photo), edit dialog, recent list | `/transactions`, `/add` |
+| `analytics/` | All metrics (`stats.ts`); Home's month overview (tiles, category breakdown, daily budget, Claude coach); the Spending explorer (category / vendor / month over a period) | `/` (Home), `/spending` |
+| `export/` | Backup download and restore (versioned JSON), CSV/JSON/PDF export modal, one-time import of pre-accounts browser data | `/account` (Your data); the one-time import offer on Home |
 | `imports/` | Bank sync (sandbox provider today) and statement upload (CSV/OFX/PDF) → shared pipeline → review → save | `/import` |
-| `assistant/` | "Ask your money" chat and one-click clean-up; tools run in the browser; edits are proposals the user approves | `/assistant`, Expenses tab |
+| `assistant/` | "Ask your money" chat and one-click clean-up; tools run in the browser; edits are proposals the user approves | `/assistant` (Ask), clean-up on `/transactions` |
 
 Account pages live in `src/app`: `/login`, `/signup`, `/forgot-password`, `/auth/confirm` (email-link route), `/account` (sign out, change password, delete account), `/account/password`.
 
@@ -32,24 +32,23 @@ Feature-first: routes are thin, logic lives in features, and domain-free helpers
 ```
 src/
   app/                     ROUTES: one folder per URL; page.tsx composes feature components
-    page.tsx ("/" tabs), top-categories/, top-vendors/, monthly-insights/, assistant/, import/
+    page.tsx (Home), transactions/, spending/, add/, import/, assistant/
     login/, signup/, forgot-password/, auth/confirm/route.ts, account/
     api/*/route.ts         validate input, call feature server code
-    _components/           AppHeader (brand, account link, sync-error banner), Brand, AuthCard
+    _components/           AppShell (header nav, mobile tab bar, sync-error banner, loading state, PageTitle), Brand, AuthCard
   features/
     expenses/              CORE DOMAIN
       types.ts, constants.ts  Expense (+ source), categories (colors, icons)
       hooks/useExpenses.ts the Supabase-backed expense store + CRUD (see Rules)
       lib/filters.ts       date/category/search filters
       lib/quickAdd.ts, lib/receiptImage.ts; server/parseExpenseText.ts (Claude)
-      components/          ExpenseForm, ExpenseList, QuickAddInput, CategoryIcon
+      components/          ExpenseForm, ExpenseList, EditExpenseDialog, RecentExpenses, QuickAddInput, CategoryIcon
     analytics/             AGGREGATION, CHARTS, COACH
       lib/stats.ts         all metrics; lib/coach.ts + server/coachInsights.ts (Claude)
       hooks/useDailyBudget.ts  daily budget in user_settings
-      components/          Dashboard, MonthlyInsights, BudgetCoach
+      components/          MonthOverview (Home), SpendingExplorer, CategoryBreakdown (shared donut + list), VendorCard, BudgetCoach
     export/
       lib/exportService.ts CSV / JSON / PDF; lib/backup.ts backup format + planRestore
-      lib/quickCsv.ts      legacy header-button CSV; don't extend it
       components/          ExportModal, BackupPanel, LocalDataImport
     imports/               BANK & STATEMENT IMPORT (docs/dev/bank-import.md)
       lib/pipeline.ts, statements.ts, protocol.ts; server/bank/ (BankProvider, mock, connectionStore)
@@ -78,8 +77,8 @@ docs/dev/, docs/user/      implementation docs (accounts, bank import, ...) and 
 - New screen:
   1. Create `src/app/<name>/page.tsx`.
   2. Put its UI in the right feature's `components/`.
-  3. Add entry points in `src/app/page.tsx`: a desktop header link (`hidden sm:flex`) **and** a mobile floating button (`sm:hidden`), or a tab like Vendors and Import.
-- Pages should not hold aggregation logic. `top-categories/page.tsx` still does, so don't copy it; move logic out when you touch it.
+  3. Decide which destination it belongs to (see Navigation below). Prefer a view or section inside an existing destination; add a new one to `AppShell` only if it answers a question no destination does, and then on desktop and mobile both.
+- Pages should not hold aggregation logic: it goes in `analytics/lib/stats.ts`, UI in a feature component.
 
 ## 5. External systems
 - **Supabase** (Auth + Postgres). Env: `NEXT_PUBLIC_SUPABASE_URL` (bare project URL, no `/rest/v1`), `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (browser-safe), `SUPABASE_SECRET_KEY` (server only; bypasses RLS). See `.env.example` and `docs/dev/accounts.md`.
@@ -135,7 +134,7 @@ npx tsc --noEmit   # run after a build or dev run (route types are generated in 
 **Reuse**
 - Money uses `formatCurrency`; never `toFixed` in UI text.
 - Check `filters.ts` and `stats.ts` before writing a helper.
-- Known duplication; don't add more: `top-categories` has its own date filtering; there are two CSV exporters.
+- One component per view: the category donut + list is `CategoryBreakdown` (Home and Spending); export is `ExportModal` only.
 
 **Validation (`ExpenseForm`)**
 - Date required; amount > 0 matching `/^\d+\.?\d{0,2}$/`; description required.
@@ -150,11 +149,24 @@ npx tsc --noEmit   # run after a build or dev run (route types are generated in 
 
 ## UI conventions
 - **Theme:** dark only, black + teal. Use the tokens in `globals.css` (`bg-canvas`, `bg-panel`, `bg-panel-raised`, `border-line`, `text-ink` / `-soft` / `-muted` / `-faint`, `bg-accent` + `text-accent-ink`), never raw grays or blues. Inline Tailwind; no CSS modules or component library. No `dark:` variants and no light theme.
-- **Page shell:** `min-h-screen bg-canvas`, `<AppHeader />`, content in `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8`. Copy the spinner loading state from an existing page. Auth pages use `AuthCard`.
+- **Page shell:** wrap signed-in pages in `<AppShell loading={isLoading}>` (header, nav, mobile tab bar, spinner) and start with `<PageTitle>`. Auth pages use `AuthCard`.
 - **Cards:** `bg-panel border border-line rounded-lg p-6`, no shadows or gradients. Primary buttons are teal and `rounded-full`.
 - **Empty states:** always handle both "no expenses" and "none in the selected range".
 - **Icons:** import from `lib/icons.tsx` (themed lucide), never from lucide directly, and no emoji. Category icons via `<CategoryIcon>`.
 - **Charts:** an explicit-height container around `ResponsiveContainer`; colors from `lib/chartTheme.ts`; tooltips use `formatCurrency`.
+
+## Navigation (one place per job)
+Each destination answers one question; don't put the same thing in two places.
+| Destination | Question | Route |
+|---|---|---|
+| Home | How am I doing this month? | `/` |
+| Transactions | What did I spend, and is it right? | `/transactions` |
+| Spending | Where does my money go over time? | `/spending` (`?view=vendor` / `month`) |
+| Ask | Answer a question about my money | `/assistant` |
+| Add (action) | Record something | `/add`, `/import` |
+| Account (profile icon) | Manage my account and data | `/account` |
+- Desktop: links in the header plus a teal Add button. Mobile: bottom tab bar (Home, Transactions, ＋, Spending, Ask). Both come from `AppShell`.
+- Old routes `/top-categories`, `/top-vendors`, `/monthly-insights` redirect (`next.config.ts`).
 
 ## Git and workflow
 - **Branches:** `main` is the integration branch. Features go on `feature/<name>` branches, sometimes in sibling worktrees; see `docs/dev/worktrees.md`.

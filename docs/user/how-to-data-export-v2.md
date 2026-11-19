@@ -111,11 +111,9 @@ The Data Export feature allows you to download all your expense records from the
 
 ### Step 1: Open the Export Feature
 
-![Screenshot: Dashboard with Export button](./screenshots/export-step-1-dashboard.png)
-
-1. Go to your **Dashboard**
-2. Look for the blue-purple gradient banner near the top
-3. Click the **"Export Data"** button
+1. Open **Account** (the profile icon at the top right)
+2. Find the **Your data** section
+3. Click **Export CSV, JSON, PDF**
 
 💡 **Note:** The export button only appears when you have at least one expense recorded.
 
@@ -477,7 +475,7 @@ Bad: export
 **Solution:**
 - Make sure you have at least one expense recorded
 - Try refreshing the page
-- Check that you're on the Dashboard page
+- Check that you're on the Account page, in the Your data section
 
 ---
 

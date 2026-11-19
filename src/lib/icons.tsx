@@ -13,6 +13,7 @@ import {
   Download,
   Eye,
   FileText,
+  House,
   Landmark,
   Lightbulb,
   List,
@@ -70,6 +71,7 @@ export const BoxIcon = themed(Package, 'Box');
 
 // Navigation & screens
 export const DashboardIcon = themed(ChartColumn, 'Dashboard');
+export const HomeIcon = themed(House, 'Home');
 export const ListIcon = themed(List, 'List');
 export const PlusIcon = themed(Plus, 'Plus');
 export const StoreIcon = themed(Store, 'Store');

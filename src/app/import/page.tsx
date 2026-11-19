@@ -1,34 +1,27 @@
 'use client';
 
+import Link from 'next/link';
 import { useExpenses } from '@/features/expenses/hooks/useExpenses';
 import ImportCenter from '@/features/imports/components/ImportCenter';
-import AppHeader from '@/app/_components/AppHeader';
+import AppShell, { PageTitle } from '@/app/_components/AppShell';
+import { ArrowLeftIcon } from '@/lib/icons';
 
+/** Part of Add: bring in many transactions from a bank or a statement file. */
 export default function ImportPage() {
   // Wait for stored expenses: the review dedupes against them.
   const { isLoading } = useExpenses();
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-canvas">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-ink-muted">Loading expenses...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-canvas">
-      <AppHeader />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-ink">Import transactions</h1>
-          <p className="text-ink-muted">Connect a bank or upload a statement. You review everything before it&apos;s saved.</p>
-        </div>
-        <ImportCenter />
-      </main>
-    </div>
+    <AppShell loading={isLoading}>
+      <Link href="/add" className="inline-flex items-center gap-1 text-sm text-ink-muted hover:text-ink mb-4">
+        <ArrowLeftIcon className="w-4 h-4" />
+        Add expenses
+      </Link>
+      <PageTitle
+        title="Import transactions"
+        subtitle="Connect a bank or upload a statement. You review everything before it's saved."
+      />
+      <ImportCenter />
+    </AppShell>
   );
 }
