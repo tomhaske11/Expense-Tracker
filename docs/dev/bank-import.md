@@ -1,7 +1,9 @@
 # Bank & statement import
 
 How transactions get from a bank or a statement file into expenses, and how to add a real
-bank aggregator. Screen: `/import` (Import tab on the home page).
+bank aggregator. Screens: banks are linked and disconnected in Account → Connected banks
+(`/account#banks`, `BankConnectionsPanel`); transactions are synced and statements uploaded on `/import`
+(`ImportCenter`, reached from Add). Linking a bank opens `/import`, which syncs the new connection.
 
 ## Flow
 
@@ -70,8 +72,8 @@ which accepts a session cookie or a Bearer access token.
    `amount` sign is already "positive = money out", `personal_finance_category.primary` →
    `categoryHint`, `merchant_name` → `merchantName`, `pending`), and item removal.
 2. Register it in `getBankProvider()`; secrets go in `.env.local`; set `BANK_TOKEN_KEY`.
-3. In `ImportCenter`, open the provider's own widget (e.g. Plaid Link with the link token)
-   instead of the sandbox `ConnectDialog`, and pass its public token to `finishLink()`.
+3. In `BankConnectionsPanel`, open the provider's own widget (e.g. Plaid Link with the link token)
+   instead of the sandbox `ConnectBankDialog`, and pass its public token to `finishLink()`.
 4. Handle the provider's webhooks to sync in the background (connections already live in
    Supabase per user; see `docs/dev/accounts.md`).
 

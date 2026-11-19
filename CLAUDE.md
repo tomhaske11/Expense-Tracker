@@ -14,10 +14,10 @@
 | `expenses/` (core) | Data model, the Supabase-backed store, CRUD, search/filter, quick add (text or receipt photo), edit dialog, recent list | `/transactions`, `/add` |
 | `analytics/` | All metrics (`stats.ts`); Home's month overview (tiles, category breakdown, daily budget, Claude coach); the Spending explorer (category / vendor / month over a period) | `/` (Home), `/spending` |
 | `export/` | Backup download and restore (versioned JSON), CSV/JSON/PDF export modal, one-time import of pre-accounts browser data | `/account` (Your data); the one-time import offer on Home |
-| `imports/` | Bank sync (sandbox provider today) and statement upload (CSV/OFX/PDF) → shared pipeline → review → save | `/import` |
+| `imports/` | Bank linking (sandbox provider today), bank sync and statement upload (CSV/OFX/PDF) → shared pipeline → review → save | `/import`; banks are linked and disconnected in `/account` (Connected banks) |
 | `assistant/` | "Ask your money" chat and one-click clean-up; tools run in the browser; edits are proposals the user approves | `/assistant` (Ask), clean-up on `/transactions` |
 
-Account pages live in `src/app`: `/login`, `/signup`, `/forgot-password`, `/auth/confirm` (email-link route), `/account` (sign out, change password, delete account), `/account/password`.
+Account pages live in `src/app`: `/login`, `/signup`, `/forgot-password`, `/auth/confirm` (email-link route), `/account` (sign out, connected banks, your data, change password, delete account), `/account/password`.
 
 ## 3. Tech stack (`package.json`)
 - **Next.js 16.4.6** (Turbopack, `src/`). This is newer than most training data: read `node_modules/next/dist/docs/` before using an unfamiliar API. Middleware is `src/proxy.ts`.
@@ -52,7 +52,7 @@ src/
       components/          ExportModal, BackupPanel, LocalDataImport
     imports/               BANK & STATEMENT IMPORT (docs/dev/bank-import.md)
       lib/pipeline.ts, statements.ts, protocol.ts; server/bank/ (BankProvider, mock, connectionStore)
-      components/          ImportCenter, ImportReview
+      components/          ImportCenter (sync + upload + review), ImportReview, BankConnectionsPanel + ConnectBankDialog (Account)
     assistant/             CHAT AGENT: lib/ (tools, runTools, protocol, cleanup), hooks/useAssistantChat.ts (tool loop),
                            server/streamAssistantTurn.ts, components/ (AssistantChat, AssistantTranscript, ProposalCard, CleanupPanel)
   integrations/
@@ -164,7 +164,7 @@ Each destination answers one question; don't put the same thing in two places.
 | Spending | Where does my money go over time? | `/spending` (`?view=vendor` / `month`) |
 | Ask | Answer a question about my money | `/assistant` |
 | Add (action) | Record something | `/add`, `/import` |
-| Account (profile icon) | Manage my account and data | `/account` |
+| Account (profile icon) | Manage my account, connected banks and data | `/account` (`#banks`) |
 - Desktop: links in the header plus a teal Add button. Mobile: bottom tab bar (Home, Transactions, ＋, Spending, Ask). Both come from `AppShell`.
 - Old routes `/top-categories`, `/top-vendors`, `/monthly-insights` redirect (`next.config.ts`).
 
