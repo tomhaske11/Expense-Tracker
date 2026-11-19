@@ -19,7 +19,7 @@ export default function ImportPage() {
       </Link>
       <PageTitle
         title="Import transactions"
-        subtitle="Connect a bank or upload a statement. You review everything before it's saved."
+        subtitle="Sync a connected bank or upload a statement. You review everything before it's saved."
       />
       <ImportCenter />
     </AppShell>

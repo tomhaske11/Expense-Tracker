@@ -13,8 +13,8 @@ Each place in the app answers one question:
 | **Transactions** (`/transactions`) | What did I spend, and is it right? | Every expense with search and filters; edit in place; delete; one-click clean-up by Claude |
 | **Spending** (`/spending`) | Where does my money go over time? | One period picker and a Category / Vendor / Month switch |
 | **Ask** (`/assistant`) | Answer a question about my money | Chat with Claude over your expenses; any edits it suggests need your approval |
-| **＋ Add** (`/add`, `/import`) | Record something | Type it in plain words, scan a receipt, fill in the form, or import from a bank or statement (CSV, OFX, PDF) |
-| **Account** (`/account`) | Manage my account and data | Sign out, password, backup and restore, export (CSV, JSON, PDF), delete account |
+| **＋ Add** (`/add`, `/import`) | Record something | Type it in plain words, scan a receipt, fill in the form, or import from a connected bank or a statement (CSV, OFX, PDF) |
+| **Account** (`/account`) | Manage my account and data | Sign out, connected banks (link, disconnect), password, backup and restore, export (CSV, JSON, PDF), delete account |
 
 On desktop these are in the header; on mobile there's a bottom tab bar with Add in the middle.
 

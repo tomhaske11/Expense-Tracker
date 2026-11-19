@@ -51,7 +51,7 @@ export default function AddPage() {
           </span>
           <span className="flex-1">
             <span className="block font-semibold text-ink">Import many at once</span>
-            <span className="block text-sm text-ink-muted">Connect a bank or upload a statement (CSV, OFX or PDF).</span>
+            <span className="block text-sm text-ink-muted">Sync a connected bank or upload a statement (CSV, OFX or PDF).</span>
           </span>
           <ChevronIcon className="w-5 h-5 -rotate-90 text-ink-muted group-hover:text-accent" />
         </Link>
