@@ -6,7 +6,6 @@ import {
   Camera,
   Car,
   ChartColumn,
-  ChartLine,
   ChartPie,
   Check,
   ChevronDown,
@@ -88,7 +87,6 @@ export const LogOutIcon = themed(LogOut, 'LogOut');
 export const BankIcon = themed(Landmark, 'Bank');
 export const UserIcon = themed(CircleUser, 'User');
 export const UploadIcon = themed(Upload, 'Upload');
-export const InvestIcon = themed(ChartLine, 'Invest');
 export const NewsIcon = themed(Newspaper, 'News');
 export const StarIcon = themed(Star, 'Star');
 

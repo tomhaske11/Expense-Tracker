@@ -40,7 +40,7 @@ interface SpendingExplorerProps {
 
 /** Spending over a chosen period, broken down one way at a time: category, vendor or month. */
 export default function SpendingExplorer({ expenses, view, onViewChange }: SpendingExplorerProps) {
-  const [range, setRange] = useState<DateRangeFilter>('thisYear');
+  const [range, setRange] = useState<DateRangeFilter>('thisMonth');
   const [vendorLimit, setVendorLimit] = useState<VendorLimit>(10);
 
   const inRange = useMemo(() => filterExpensesByDateRange(expenses, range), [expenses, range]);

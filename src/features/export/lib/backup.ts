@@ -6,12 +6,12 @@ import { generateId } from '@/lib/utils';
 
 /*
  * Full-fidelity backups and restore. A backup is a versioned JSON file with every expense
- * field plus settings. Restore also accepts the older JSON export ({ expenses: [...] } without
+ * field. Version 1 also carried a daily budget setting, which no longer exists; restore ignores it. Restore also accepts the older JSON export ({ expenses: [...] } without
  * timestamps) and a bare array of expenses, validating every record before anything is saved.
  */
 
 export const BACKUP_APP = 'expenseAI';
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 /** Largest backup file restore will read. */
 export const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
 
@@ -20,17 +20,15 @@ export interface BackupFile {
   kind: 'backup';
   version: number;
   exportedAt: string;
-  settings: { dailyBudget: number };
   expenses: Expense[];
 }
 
-export function buildBackup(expenses: Expense[], dailyBudget: number, now = new Date()): BackupFile {
+export function buildBackup(expenses: Expense[], now = new Date()): BackupFile {
   return {
     app: BACKUP_APP,
     kind: 'backup',
     version: BACKUP_VERSION,
     exportedAt: now.toISOString(),
-    settings: { dailyBudget },
     expenses,
   };
 }
@@ -71,7 +69,6 @@ export interface RestorePlan {
   skipped: { position: number; reason: string }[];
   /** Records whose unknown category was changed to Other. */
   recategorized: number;
-  dailyBudget: number | null;
 }
 
 export class RestoreError extends Error {}
@@ -127,7 +124,6 @@ export function planRestore(text: string, existing: Expense[], now = new Date())
   let source: RestorePlan['source'];
   let rawRecords: unknown[];
   let exportedAt: string | null = null;
-  let dailyBudget: number | null = null;
 
   if (Array.isArray(data)) {
     source = 'list';
@@ -140,8 +136,6 @@ export function planRestore(text: string, existing: Expense[], now = new Date())
       if (typeof file.version === 'number' && file.version > BACKUP_VERSION) {
         throw new RestoreError('This backup was made by a newer version of expenseAI. Update the app, then try again.');
       }
-      const budget = (file.settings as { dailyBudget?: unknown } | undefined)?.dailyBudget;
-      if (typeof budget === 'number' && Number.isFinite(budget) && budget > 0) dailyBudget = budget;
     } else {
       source = 'export';
     }
@@ -191,5 +185,5 @@ export function planRestore(text: string, existing: Expense[], now = new Date())
     throw new RestoreError(`None of the ${rawRecords.length} records in that file could be read.`);
   }
 
-  return { source, exportedAt, records, newRecords, alreadyPresent, skipped, recategorized, dailyBudget };
+  return { source, exportedAt, records, newRecords, alreadyPresent, skipped, recategorized };
 }

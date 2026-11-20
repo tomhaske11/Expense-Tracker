@@ -1,6 +1,6 @@
-# Investing (Invest tab)
+# Investing (Home)
 
-What's on `/invest` and Home's markets card, where the data comes from, and how to switch to
+What's on Home (`/`; `/invest` redirects there), where the data comes from, and how to switch to
 real market data.
 
 ## Screens
@@ -11,7 +11,6 @@ real market data.
 | Your portfolio: value, today, total gain, by account, positions | `PortfolioPanel`, `HoldingForm` | `public.holdings` + prices |
 | Watchlist | `Watchlist` | `public.watchlist` + prices |
 | News, "Your stocks" (top 5 holdings, then watchlist) or "Market" | `NewsFeed` | `/api/markets/news`, `/api/markets/news/notes` |
-| Home's "Markets today" card | `MarketsBrief` | prices + news, no Claude |
 
 Indexes are shown through the funds that track them (SPY, QQQ, DIA, IWM): index values need
 a separate data licence, fund prices don't. The UI says so in the disclaimer.

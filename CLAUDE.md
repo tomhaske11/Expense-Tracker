@@ -4,18 +4,18 @@
 
 ## 1. Application type
 - **Multi-user web app** on Next.js (App Router), heading for an iPhone app via Capacitor.
-- **Accounts and data:** Supabase. Users sign in with Supabase Auth; expenses, settings and bank connections live in Postgres. The browser queries Supabase directly, and row-level security (RLS) limits every query to the signed-in user's rows. Setup and schema: `docs/dev/accounts.md`.
-- **Server:** API routes call Claude (`/api/quick-add`, `receipt`, `coach`, `assistant`, `imports/*`, `markets/news/notes`), the bank provider (`/api/bank/*`), the market-data provider (`/api/markets/*`) or Supabase admin (`/api/account`).
+- **Accounts and data:** Supabase. Users sign in with Supabase Auth; expenses, holdings, watchlist and bank connections live in Postgres. The browser queries Supabase directly, and row-level security (RLS) limits every query to the signed-in user's rows. Setup and schema: `docs/dev/accounts.md`.
+- **Server:** API routes call Claude (`/api/quick-add`, `receipt`, `assistant`, `imports/*`, `markets/news/notes`), the bank provider (`/api/bank/*`), the market-data provider (`/api/markets/*`) or Supabase admin (`/api/account`).
 - **Rendering:** all pages are `'use client'` and prerendered static, which suits bundling them into the native app.
 
 ## 2. Main features (`src/features/`)
 | Feature | Does | Routes |
 |---|---|---|
 | `expenses/` (core) | Data model, the Supabase-backed store, CRUD, search/filter, quick add (text or receipt photo), edit dialog, recent list | `/transactions`, `/add` |
-| `analytics/` | All metrics (`stats.ts`); Home's month overview (tiles, category breakdown, daily budget, Claude coach); the Spending explorer (category / vendor / month over a period) | `/` (Home), `/spending` |
-| `export/` | Backup download and restore (versioned JSON), CSV/JSON/PDF export modal, one-time import of pre-accounts browser data | `/account` (Your data); the one-time import offer on Home |
+| `analytics/` | All metrics (`stats.ts`); the Spending explorer (category / vendor / month over a period, opening on this month) | `/spending` |
+| `export/` | Backup download and restore (versioned JSON), CSV/JSON/PDF export modal, one-time import of pre-accounts browser data | `/account` (Your data, and the one-time import offer) |
 | `imports/` | Bank linking (sandbox provider today), bank sync and statement upload (CSV/OFX/PDF) → shared pipeline → review → save | `/import`; banks are linked and disconnected in `/account` (Connected banks) |
-| `investing/` | Market overview (index funds), holdings entered by hand, watchlist, news with Claude's "why it matters" notes, Home's markets card. Market data comes from a provider behind a shared cache | `/invest`; the markets card on `/` |
+| `investing/` | Market overview (index funds), holdings entered by hand, watchlist, news with Claude's "why it matters" notes. Market data comes from a provider behind a shared cache | `/` (Home) |
 | `assistant/` | "Ask your money" chat and one-click clean-up; tools run in the browser; edits are proposals the user approves | `/assistant` (Ask), clean-up on `/transactions` |
 
 Account pages live in `src/app`: `/login`, `/signup`, `/forgot-password`, `/auth/confirm` (email-link route), `/account` (sign out, connected banks, your data, change password, delete account), `/account/password`.
@@ -33,7 +33,7 @@ Feature-first: routes are thin, logic lives in features, and domain-free helpers
 ```
 src/
   app/                     ROUTES: one folder per URL; page.tsx composes feature components
-    page.tsx (Home), transactions/, spending/, invest/, add/, import/, assistant/
+    page.tsx (Home: investments), transactions/, spending/, add/, import/, assistant/
     login/, signup/, forgot-password/, auth/confirm/route.ts, account/
     api/*/route.ts         validate input, call feature server code
     _components/           AppShell (header nav, mobile tab bar, sync-error banner, loading state, PageTitle), Brand, AuthCard
@@ -43,11 +43,10 @@ src/
       hooks/useExpenses.ts the Supabase-backed expense store + CRUD (see Rules)
       lib/filters.ts       date/category/search filters
       lib/quickAdd.ts, lib/receiptImage.ts; server/parseExpenseText.ts (Claude)
-      components/          ExpenseForm, ExpenseList, EditExpenseDialog, RecentExpenses, QuickAddInput, CategoryIcon
+      components/          ExpenseForm, ExpenseList, EditExpenseDialog, QuickAddInput, CategoryIcon
     analytics/             AGGREGATION, CHARTS, COACH
-      lib/stats.ts         all metrics; lib/coach.ts + server/coachInsights.ts (Claude)
-      hooks/useDailyBudget.ts  daily budget in user_settings
-      components/          MonthOverview (Home), SpendingExplorer, CategoryBreakdown (shared donut + list), VendorCard, BudgetCoach
+      lib/stats.ts         all metrics
+      components/          SpendingExplorer, CategoryBreakdown (donut + list), VendorCard
     export/
       lib/exportService.ts CSV / JSON / PDF; lib/backup.ts backup format + planRestore
       components/          ExportModal, BackupPanel, LocalDataImport
@@ -58,7 +57,7 @@ src/
       lib/types.ts, markets.ts (index funds, disclaimer), portfolio.ts (summarizePortfolio, formatPercent)
       hooks/               useHoldings, useWatchlist (Supabase), useMarketData (usePrices, useNews, useNewsNotes)
       server/market/       MarketDataProvider, mock + Massive providers, cached getPrices/getNews; server/newsNotes.ts (Claude)
-      components/          MarketOverview, PortfolioPanel, HoldingForm, Watchlist, NewsFeed, MarketsBrief (Home), PriceChart, Sparkline, Change
+      components/          MarketOverview, PortfolioPanel, HoldingForm, Watchlist, NewsFeed, PriceChart, Sparkline, Change
     assistant/             CHAT AGENT: lib/ (tools, runTools, protocol, cleanup), hooks/useAssistantChat.ts (tool loop),
                            server/streamAssistantTurn.ts, components/ (AssistantChat, AssistantTranscript, ProposalCard, CleanupPanel)
   integrations/
@@ -73,7 +72,7 @@ docs/dev/, docs/user/      implementation docs (accounts, bank import, ...) and 
 **Import direction:** `app → assistant → investing → analytics → export → imports → expenses → lib`. (`investing` doesn't use the expense features today.) Never import upward.
 - `lib/` and `integrations/` import no feature. A helper that needs `Expense` belongs in a feature.
 - `integrations/anthropic`, `getSupabaseAdmin()` and the bank layer are server-only (`import 'server-only'`); only `server/` folders and `src/app/api/` use them. Client code may only `import type` from the Anthropic SDK.
-- The Supabase **browser** client (`integrations/supabase/browser.ts`) is used by the data-layer hooks (`useExpenses`, `useDailyBudget`) and the account pages. Don't query Supabase from other components; add to a hook instead.
+- The Supabase **browser** client (`integrations/supabase/browser.ts`) is used by the data-layer hooks (`useExpenses`, `useHoldings`, `useWatchlist`) and the account pages. Don't query Supabase from other components; add to a hook instead.
 - Import across features by full path. Don't add barrel `index.ts` files.
 
 **Where new code goes:**
@@ -92,8 +91,8 @@ docs/dev/, docs/user/      implementation docs (accounts, bank import, ...) and 
   - Every API route starts with `requireUser(request)`, which accepts the session cookie (web) or `Authorization: Bearer <access token>` (native app).
   - `getSupabaseAdmin()` bypasses RLS: use it only for server-only tables and admin actions, always filtered by the verified user id.
 - **Anthropic Claude API**, called from the server with `ANTHROPIC_API_KEY`. The key must never reach the browser.
-  - All calls use server-side refusal fallbacks. Quick add, receipts, coach and imports: `beta.messages.parse` with a zod schema, `effort: 'low'`. Assistant: `beta.messages.stream`, `effort: 'medium'`; the browser keeps the history, runs the tools and loops (max 10 steps).
-  - User text, photos, assistant tool results and import descriptions are sent to Anthropic; the UI says so in each place. The coach sends aggregates only. Server code re-validates Claude's output (`sanitize`).
+  - All calls use server-side refusal fallbacks. Quick add, receipts, imports and news notes: `beta.messages.parse` with a zod schema, `effort: 'low'`. Assistant: `beta.messages.stream`, `effort: 'medium'`; the browser keeps the history, runs the tools and loops (max 10 steps).
+  - User text, photos, assistant tool results and import descriptions are sent to Anthropic; the UI says so in each place. News notes send only headlines and summaries. Server code re-validates Claude's output (`sanitize`).
   - Claude never writes data directly: quick add prefills a form; `propose_changes` shows a card the user approves; imports are reviewed before saving.
   - Claude routes call `await limitClaudeRequest(request, user.id)`: per-user and app-wide limits, counted in Upstash Redis (`KV_REST_API_URL` / `KV_REST_API_TOKEN`) so they hold across Vercel instances; in memory when those aren't set. If Redis is unreachable in production, Claude features pause (503) rather than run unlimited.
 - **Banks:** `BANK_PROVIDER` (`mock` only so far). Tokens are stored server-side in `bank_connections`, encrypted with `BANK_TOKEN_KEY` (required for live providers). Details: `docs/dev/bank-import.md`.
@@ -142,7 +141,7 @@ npx tsc --noEmit   # run after a build or dev run (route types are generated in 
 **Reuse**
 - Money uses `formatCurrency`; never `toFixed` in UI text.
 - Check `filters.ts` and `stats.ts` before writing a helper.
-- One component per view: the category donut + list is `CategoryBreakdown` (Home and Spending); export is `ExportModal` only.
+- One component per view: the category donut + list is `CategoryBreakdown`; export is `ExportModal` only.
 
 **Validation (`ExpenseForm`)**
 - Date required; amount > 0 matching `/^\d+\.?\d{0,2}$/`; description required.
@@ -167,15 +166,14 @@ npx tsc --noEmit   # run after a build or dev run (route types are generated in 
 Each destination answers one question; don't put the same thing in two places.
 | Destination | Question | Route |
 |---|---|---|
-| Home | How am I doing this month? | `/` |
+| Home | How are my investments doing, and what's moving the market? | `/` |
 | Transactions | What did I spend, and is it right? | `/transactions` |
 | Spending | Where does my money go over time? | `/spending` (`?view=vendor` / `month`) |
-| Invest | How are my investments doing, and what's moving the market? | `/invest` |
 | Ask | Answer a question about my money | `/assistant` |
 | Add (action) | Record something | `/add`, `/import` |
 | Account (profile icon) | Manage my account, connected banks and data | `/account` (`#banks`) |
-- Desktop: links in the header plus a teal Add button. Mobile: bottom tab bar (Home, Spending, ＋, Invest, Ask); Transactions is reached from Home's recent list and Spending's "All transactions" link. Both come from `AppShell`.
-- Old routes `/top-categories`, `/top-vendors`, `/monthly-insights` redirect (`next.config.ts`).
+- Desktop: links in the header plus a teal Add button. Mobile: bottom tab bar (Home, Transactions, ＋, Spending, Ask). Both come from `AppShell`.
+- Old routes `/top-categories`, `/top-vendors`, `/monthly-insights`, `/invest` redirect (`next.config.ts`).
 
 ## Git and workflow
 - **Branches:** `main` is the integration branch. Features go on `feature/<name>` branches, sometimes in sibling worktrees; see `docs/dev/worktrees.md`.
