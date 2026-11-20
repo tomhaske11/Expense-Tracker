@@ -36,6 +36,26 @@ holdings, watchlist ◀──── Supabase (RLS: own rows only)
   when Claude actually runs.
 - **Guardrail:** the notes prompt forbids buy/sell/hold advice and price predictions.
 
+## Ask: market tools
+
+The assistant (`/assistant`) has three market tools, run in the browser like its spending tools:
+
+| Tool | Source | Returns |
+|---|---|---|
+| `get_market_trend` | `POST /api/markets/analysis` `{kind:'trend'}` → `computeTrend` | price, returns (1d–1y, YTD), 20/50/200-day averages and distance, RSI(14), 52-week range, volatility, 1-year drawdown, support/resistance, trend label, recent crossings |
+| `test_market_pattern` | `{kind:'pattern'}` → `testPattern` | for a condition (crosses of the 50/200-day, golden/death cross, RSI 30/70, 10% off the high, new high, 5% drop in a week, crossing a price level): count, median/average return, % positive, best/worst over the horizon, vs the any-day baseline; recent occurrences; whether one is in progress |
+| `get_my_holdings` | the user's `holdings` rows | ticker, shares, account, total cost |
+
+- History: up to ~5 years of daily closes per symbol (`getLongHistory`, cached an hour). Massive's
+  free plan has 2 years, so pattern tests have smaller samples there; results state the range.
+- Events closer together than the horizon count once, so one long move isn't counted many times.
+- Support/resistance: swing highs/lows (lower/higher than 5 days on each side) in the past year,
+  grouped within 1.5%; the two nearest below and above the price.
+- The prompt (`assistant/server/streamAssistantTurn.ts`) has Claude report base rates with sample
+  sizes, compare with the baseline, describe scenarios only conditionally, never give targets or
+  buy/sell/hold advice, flag sandbox data, and end with "This is information, not investment advice."
+- `technicals.ts` is pure; check it with Node's type stripping (no test framework yet).
+
 ## Providers (`server/market/`)
 
 `MARKET_DATA_PROVIDER` picks one; by default `massive` when `MASSIVE_API_KEY` is set, else `mock`.

@@ -27,6 +27,13 @@ const fromRow = (r: HoldingRow): Holding => ({
 
 const toRow = (h: HoldingInput) => ({ symbol: h.symbol, shares: h.shares, cost_basis: h.costBasis, account: h.account });
 
+/** The user's holdings, read once outside React (the assistant's get_my_holdings tool). */
+export async function fetchHoldings(): Promise<Holding[]> {
+  const { data, error } = await getSupabaseBrowser().from('holdings').select('*').order('created_at');
+  if (error) throw new Error("Couldn't load holdings.");
+  return ((data ?? []) as HoldingRow[]).map(fromRow);
+}
+
 /**
  * The user's holdings (public.holdings, limited to their rows by RLS). Changes are optimistic:
  * the list updates at once and rolls back with an error message if saving fails.

@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import type Anthropic from '@anthropic-ai/sdk';
-import { formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { APP_NOTE_PREFIX, useAssistantChat } from '@/features/assistant/hooks/useAssistantChat';
 import ProposalCard from '@/features/assistant/components/ProposalCard';
 import { SearchIcon } from '@/lib/icons';
@@ -19,14 +19,20 @@ export const TOOL_LABELS: Record<string, string> = {
   list_vendors: 'Listed vendors',
   find_possible_duplicates: 'Checked for duplicates',
   get_budget_streak: 'Checked budget streak',
+  get_market_trend: 'Checked market trend',
+  test_market_pattern: 'Tested a market pattern',
+  get_my_holdings: 'Looked up your holdings',
   propose_changes: 'Drafting proposed changes',
 };
 
 function describeToolCall(name: string, input: unknown): string {
   const label = TOOL_LABELS[name] ?? name;
   if (typeof input !== 'object' || input === null) return label;
-  const { start_date, end_date, group_by, category, search } = input as Record<string, unknown>;
+  const { start_date, end_date, group_by, category, search, symbol, condition, horizon_days, level } = input as Record<string, unknown>;
   const parts: string[] = [];
+  if (typeof symbol === 'string') parts.push(symbol.toUpperCase());
+  if (typeof condition === 'string') parts.push(condition.replace(/_/g, ' ').replace(/(\d+)d\b/, '$1-day average') + (typeof level === 'number' ? ` ${formatCurrency(level)}` : ''));
+  if (typeof horizon_days === 'number') parts.push(`next ${horizon_days} trading days`);
   if (typeof group_by === 'string') parts.push(`by ${group_by}`);
   if (typeof category === 'string') parts.push(category);
   if (typeof search === 'string' && search) parts.push(`“${search}”`);

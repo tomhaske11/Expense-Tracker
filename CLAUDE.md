@@ -16,7 +16,7 @@
 | `export/` | Backup download and restore (versioned JSON), CSV/JSON/PDF export modal, one-time import of pre-accounts browser data | `/account` (Your data, and the one-time import offer) |
 | `imports/` | Bank linking (sandbox provider today), bank sync and statement upload (CSV/OFX/PDF) → shared pipeline → review → save | `/import`; banks are linked and disconnected in `/account` (Connected banks) |
 | `investing/` | Market overview (index funds), holdings entered by hand, watchlist, news with Claude's "why it matters" notes. Market data comes from a provider behind a shared cache | `/` (Home) |
-| `assistant/` | "Ask your money" chat and one-click clean-up; tools run in the browser; edits are proposals the user approves | `/assistant` (Ask), clean-up on `/transactions` |
+| `assistant/` | "Ask your money" chat and one-click clean-up; tools run in the browser (spending tools on the cached expenses; market tools call `/api/markets/analysis`); edits are proposals the user approves | `/assistant` (Ask), clean-up on `/transactions` |
 
 Account pages live in `src/app`: `/login`, `/signup`, `/forgot-password`, `/auth/confirm` (email-link route), `/account` (sign out, connected banks, your data, change password, delete account), `/account/password`.
 
@@ -54,7 +54,8 @@ src/
       lib/pipeline.ts, statements.ts, protocol.ts; server/bank/ (BankProvider, mock, connectionStore)
       components/          ImportCenter (sync + upload + review), ImportReview, BankConnectionsPanel + ConnectBankDialog (Account)
     investing/             MARKETS & PORTFOLIO (docs/dev/investing.md)
-      lib/types.ts, markets.ts (index funds, disclaimer), portfolio.ts (summarizePortfolio, formatPercent)
+      lib/types.ts, markets.ts (index funds, disclaimer), portfolio.ts (summarizePortfolio, formatPercent),
+                           technicals.ts (moving averages, RSI, levels, computeTrend, testPattern), analysis.ts (request schemas)
       hooks/               useHoldings, useWatchlist (Supabase), useMarketData (usePrices, useNews, useNewsNotes)
       server/market/       MarketDataProvider, mock + Massive providers, cached getPrices/getNews; server/newsNotes.ts (Claude)
       components/          MarketOverview, PortfolioPanel, HoldingForm, Watchlist, NewsFeed, PriceChart, Sparkline, Change
@@ -97,7 +98,7 @@ docs/dev/, docs/user/      implementation docs (accounts, bank import, ...) and 
   - Claude routes call `await limitClaudeRequest(request, user.id)`: per-user and app-wide limits, counted in Upstash Redis (`KV_REST_API_URL` / `KV_REST_API_TOKEN`) so they hold across Vercel instances; in memory when those aren't set. If Redis is unreachable in production, Claude features pause (503) rather than run unlimited.
 - **Banks:** `BANK_PROVIDER` (`mock` only so far). Tokens are stored server-side in `bank_connections`, encrypted with `BANK_TOKEN_KEY` (required for live providers). Details: `docs/dev/bank-import.md`.
 - **Market data:** `MARKET_DATA_PROVIDER` (`mock` or `massive`; default `massive` when `MASSIVE_API_KEY` is set, otherwise sandbox data labeled in the UI). Prices and news are cached in Redis (`lib/cache.ts`) and shared by all users; only ticker symbols leave the server, never holdings. Details: `docs/dev/investing.md`.
-- **Investing guardrail:** Claude explains news; it never recommends buying, selling or holding, and never predicts prices. Keep the disclaimer on screens that show investing data.
+- **Investing guardrail:** Claude explains news, indicators and historical base rates; it never recommends buying, selling or holding a specific investment, never gives price targets, and never states that something will happen. Every market figure it cites comes from a tool (`technicals.ts`), not its own arithmetic. Keep the disclaimer on screens and in answers that discuss investing.
 - **Exports** download through a Blob link. **Fonts** (`next/font/google`) are fetched at build time.
 
 ## 6. Build and deploy

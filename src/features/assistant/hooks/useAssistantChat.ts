@@ -13,6 +13,7 @@ import {
   runReadTool,
   validateProposal,
 } from '@/features/assistant/lib/runTools';
+import { MARKET_TOOLS, runMarketTool } from '@/features/assistant/lib/runMarketTools';
 
 /*
  * Client side of the assistant. The browser owns the conversation: it sends the history to
@@ -110,7 +111,7 @@ export function useAssistantChat() {
   }, []);
 
   /** Run the tools in one assistant message. Returns the tool_result blocks. */
-  const runTools = useCallback((content: ContentBlock[]): ToolResult[] => {
+  const runTools = useCallback(async (content: ContentBlock[]): Promise<ToolResult[]> => {
     const expenses = getExpensesSnapshot();
     const today = new Date();
     const results: ToolResult[] = [];
@@ -146,7 +147,9 @@ export function useAssistantChat() {
         continue;
       }
 
-      const outcome = runReadTool(block.name, block.input, expenses, today);
+      const outcome = MARKET_TOOLS.has(block.name)
+        ? await runMarketTool(block.name, block.input)
+        : runReadTool(block.name, block.input, expenses, today);
       if (outcome.ok) reply(outcome.result);
       else reply({ error: outcome.error }, true);
     }
@@ -212,7 +215,7 @@ export function useAssistantChat() {
             return;
           }
 
-          messages = [...messages, { role: 'user', content: runTools(content) }];
+          messages = [...messages, { role: 'user', content: await runTools(content) }];
           commit(messages);
         }
         setError(`Stopped after ${ASSISTANT_MAX_STEPS} steps. Ask a follow-up to let Claude continue.`);
