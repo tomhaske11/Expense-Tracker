@@ -6,9 +6,10 @@ import MonthOverview from '@/features/analytics/components/MonthOverview';
 import RecentExpenses from '@/features/expenses/components/RecentExpenses';
 import LocalDataImport from '@/features/export/components/LocalDataImport';
 import AppShell, { PageTitle } from '@/app/_components/AppShell';
+import MarketsBrief from '@/features/investing/components/MarketsBrief';
 import { BankIcon, PlusIcon } from '@/lib/icons';
 
-/** Home: how am I doing this month? */
+/** Home: how am I doing today and this month? Spending first, then markets, then recent expenses. */
 export default function HomePage() {
   const { expenses, isLoading } = useExpenses();
 
@@ -44,9 +45,11 @@ export default function HomePage() {
           <>
             <PageTitle title="This month" subtitle="How your spending is tracking against your daily budget." />
             <MonthOverview expenses={expenses} />
-            <RecentExpenses expenses={expenses} />
           </>
         )}
+
+        <MarketsBrief />
+        {expenses.length > 0 && <RecentExpenses expenses={expenses} />}
       </div>
     </AppShell>
   );

@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChatIcon, HomeIcon, ListIcon, PieIcon, PlusIcon, UserIcon, type Icon } from '@/lib/icons';
+import { ChatIcon, HomeIcon, InvestIcon, ListIcon, PieIcon, PlusIcon, UserIcon, type Icon } from '@/lib/icons';
 import SyncErrorBanner from '@/app/_components/SyncErrorBanner';
 import { Brand } from '@/app/_components/Brand';
 
@@ -12,10 +12,12 @@ import { Brand } from '@/app/_components/Brand';
  *   Home          how am I doing this month?
  *   Transactions  what did I spend, and is it right?
  *   Spending      where does my money go over time?
+ *   Invest        how are my investments doing, and what's moving the market?
  *   Ask           answer a question about my money
  *   Add           record something (an action: typed, receipt, manual, or import)
  *   Account       manage my account and my data (behind the profile icon)
- * Desktop shows these in the header; mobile shows a bottom tab bar with Add in the middle.
+ * Desktop shows these in the header. Mobile has a bottom tab bar (Home, Spending, Add, Invest, Ask);
+ * Transactions is reached from Home's recent list and from Spending.
  */
 
 interface Destination {
@@ -29,6 +31,7 @@ interface Destination {
 const HOME: Destination = { href: '/', label: 'Home', icon: HomeIcon };
 const TRANSACTIONS: Destination = { href: '/transactions', label: 'Transactions', icon: ListIcon };
 const SPENDING: Destination = { href: '/spending', label: 'Spending', icon: PieIcon };
+const INVEST: Destination = { href: '/invest', label: 'Invest', icon: InvestIcon };
 const ASK: Destination = { href: '/assistant', label: 'Ask', icon: ChatIcon };
 const ADD: Destination = { href: '/add', label: 'Add', icon: PlusIcon, also: ['/import'] };
 
@@ -51,7 +54,7 @@ export default function AppShell({ children, loading = false }: AppShellProps) {
           <div className="flex items-center justify-between h-16 gap-4">
             <Brand />
             <nav aria-label="Main" className="hidden sm:flex items-center gap-1">
-              {[HOME, TRANSACTIONS, SPENDING, ASK].map((d) => (
+              {[HOME, TRANSACTIONS, SPENDING, INVEST, ASK].map((d) => (
                 <HeaderLink key={d.href} destination={d} active={isActive(d, pathname)} />
               ))}
             </nav>
@@ -83,7 +86,7 @@ export default function AppShell({ children, loading = false }: AppShellProps) {
           <div className="py-24 flex items-center justify-center">
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-ink-muted">Loading expenses...</p>
+              <p className="text-ink-muted">Loading…</p>
             </div>
           </div>
         ) : (
@@ -96,7 +99,7 @@ export default function AppShell({ children, loading = false }: AppShellProps) {
         className="sm:hidden fixed bottom-0 inset-x-0 z-20 bg-canvas/95 backdrop-blur border-t border-line pb-[env(safe-area-inset-bottom)]"
       >
         <div className="grid grid-cols-5 h-16">
-          {[HOME, TRANSACTIONS, ADD, SPENDING, ASK].map((d) =>
+          {[HOME, SPENDING, ADD, INVEST, ASK].map((d) =>
             d === ADD ? (
               <Link key={d.href} href={d.href} aria-label="Add" className="flex items-center justify-center">
                 <span

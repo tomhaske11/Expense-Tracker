@@ -5,7 +5,7 @@
 ## 1. Application type
 - **Multi-user web app** on Next.js (App Router), heading for an iPhone app via Capacitor.
 - **Accounts and data:** Supabase. Users sign in with Supabase Auth; expenses, settings and bank connections live in Postgres. The browser queries Supabase directly, and row-level security (RLS) limits every query to the signed-in user's rows. Setup and schema: `docs/dev/accounts.md`.
-- **Server:** API routes call Claude (`/api/quick-add`, `receipt`, `coach`, `assistant`, `imports/*`), the bank provider (`/api/bank/*`) or Supabase admin (`/api/account`).
+- **Server:** API routes call Claude (`/api/quick-add`, `receipt`, `coach`, `assistant`, `imports/*`, `markets/news/notes`), the bank provider (`/api/bank/*`), the market-data provider (`/api/markets/*`) or Supabase admin (`/api/account`).
 - **Rendering:** all pages are `'use client'` and prerendered static, which suits bundling them into the native app.
 
 ## 2. Main features (`src/features/`)
@@ -15,6 +15,7 @@
 | `analytics/` | All metrics (`stats.ts`); Home's month overview (tiles, category breakdown, daily budget, Claude coach); the Spending explorer (category / vendor / month over a period) | `/` (Home), `/spending` |
 | `export/` | Backup download and restore (versioned JSON), CSV/JSON/PDF export modal, one-time import of pre-accounts browser data | `/account` (Your data); the one-time import offer on Home |
 | `imports/` | Bank linking (sandbox provider today), bank sync and statement upload (CSV/OFX/PDF) → shared pipeline → review → save | `/import`; banks are linked and disconnected in `/account` (Connected banks) |
+| `investing/` | Market overview (index funds), holdings entered by hand, watchlist, news with Claude's "why it matters" notes, Home's markets card. Market data comes from a provider behind a shared cache | `/invest`; the markets card on `/` |
 | `assistant/` | "Ask your money" chat and one-click clean-up; tools run in the browser; edits are proposals the user approves | `/assistant` (Ask), clean-up on `/transactions` |
 
 Account pages live in `src/app`: `/login`, `/signup`, `/forgot-password`, `/auth/confirm` (email-link route), `/account` (sign out, connected banks, your data, change password, delete account), `/account/password`.
@@ -32,7 +33,7 @@ Feature-first: routes are thin, logic lives in features, and domain-free helpers
 ```
 src/
   app/                     ROUTES: one folder per URL; page.tsx composes feature components
-    page.tsx (Home), transactions/, spending/, add/, import/, assistant/
+    page.tsx (Home), transactions/, spending/, invest/, add/, import/, assistant/
     login/, signup/, forgot-password/, auth/confirm/route.ts, account/
     api/*/route.ts         validate input, call feature server code
     _components/           AppShell (header nav, mobile tab bar, sync-error banner, loading state, PageTitle), Brand, AuthCard
@@ -53,18 +54,23 @@ src/
     imports/               BANK & STATEMENT IMPORT (docs/dev/bank-import.md)
       lib/pipeline.ts, statements.ts, protocol.ts; server/bank/ (BankProvider, mock, connectionStore)
       components/          ImportCenter (sync + upload + review), ImportReview, BankConnectionsPanel + ConnectBankDialog (Account)
+    investing/             MARKETS & PORTFOLIO (docs/dev/investing.md)
+      lib/types.ts, markets.ts (index funds, disclaimer), portfolio.ts (summarizePortfolio, formatPercent)
+      hooks/               useHoldings, useWatchlist (Supabase), useMarketData (usePrices, useNews, useNewsNotes)
+      server/market/       MarketDataProvider, mock + Massive providers, cached getPrices/getNews; server/newsNotes.ts (Claude)
+      components/          MarketOverview, PortfolioPanel, HoldingForm, Watchlist, NewsFeed, MarketsBrief (Home), PriceChart, Sparkline, Change
     assistant/             CHAT AGENT: lib/ (tools, runTools, protocol, cleanup), hooks/useAssistantChat.ts (tool loop),
                            server/streamAssistantTurn.ts, components/ (AssistantChat, AssistantTranscript, ProposalCard, CleanupPanel)
   integrations/
     anthropic/             server-only Claude client, CLAUDE_MODEL ('claude-opus-5-5'), describeAnthropicError
     supabase/              env.ts, browser.ts (browser client), server.ts (requireUser, admin client)
-  lib/                     SHARED, domain-free: utils.ts, icons.tsx, chartTheme.ts; server-only rateLimit.ts (Upstash Redis REST)
+  lib/                     SHARED, domain-free: utils.ts, icons.tsx, chartTheme.ts; server-only redis.ts (Upstash REST), rateLimit.ts, cache.ts (shared cache with stale fallback)
   proxy.ts                 Supabase session refresh + gate: pages → /login, /api/* → 401
 supabase/migrations/       SQL schema (tables, RLS, grants, realtime)
 public/                    static assets
 docs/dev/, docs/user/      implementation docs (accounts, bank import, ...) and how-to guides
 ```
-**Import direction:** `app → assistant → analytics → export → imports → expenses → lib`. Never import upward.
+**Import direction:** `app → assistant → investing → analytics → export → imports → expenses → lib`. (`investing` doesn't use the expense features today.) Never import upward.
 - `lib/` and `integrations/` import no feature. A helper that needs `Expense` belongs in a feature.
 - `integrations/anthropic`, `getSupabaseAdmin()` and the bank layer are server-only (`import 'server-only'`); only `server/` folders and `src/app/api/` use them. Client code may only `import type` from the Anthropic SDK.
 - The Supabase **browser** client (`integrations/supabase/browser.ts`) is used by the data-layer hooks (`useExpenses`, `useDailyBudget`) and the account pages. Don't query Supabase from other components; add to a hook instead.
@@ -91,6 +97,8 @@ docs/dev/, docs/user/      implementation docs (accounts, bank import, ...) and 
   - Claude never writes data directly: quick add prefills a form; `propose_changes` shows a card the user approves; imports are reviewed before saving.
   - Claude routes call `await limitClaudeRequest(request, user.id)`: per-user and app-wide limits, counted in Upstash Redis (`KV_REST_API_URL` / `KV_REST_API_TOKEN`) so they hold across Vercel instances; in memory when those aren't set. If Redis is unreachable in production, Claude features pause (503) rather than run unlimited.
 - **Banks:** `BANK_PROVIDER` (`mock` only so far). Tokens are stored server-side in `bank_connections`, encrypted with `BANK_TOKEN_KEY` (required for live providers). Details: `docs/dev/bank-import.md`.
+- **Market data:** `MARKET_DATA_PROVIDER` (`mock` or `massive`; default `massive` when `MASSIVE_API_KEY` is set, otherwise sandbox data labeled in the UI). Prices and news are cached in Redis (`lib/cache.ts`) and shared by all users; only ticker symbols leave the server, never holdings. Details: `docs/dev/investing.md`.
+- **Investing guardrail:** Claude explains news; it never recommends buying, selling or holding, and never predicts prices. Keep the disclaimer on screens that show investing data.
 - **Exports** download through a Blob link. **Fonts** (`next/font/google`) are fetched at build time.
 
 ## 6. Build and deploy
@@ -162,10 +170,11 @@ Each destination answers one question; don't put the same thing in two places.
 | Home | How am I doing this month? | `/` |
 | Transactions | What did I spend, and is it right? | `/transactions` |
 | Spending | Where does my money go over time? | `/spending` (`?view=vendor` / `month`) |
+| Invest | How are my investments doing, and what's moving the market? | `/invest` |
 | Ask | Answer a question about my money | `/assistant` |
 | Add (action) | Record something | `/add`, `/import` |
 | Account (profile icon) | Manage my account, connected banks and data | `/account` (`#banks`) |
-- Desktop: links in the header plus a teal Add button. Mobile: bottom tab bar (Home, Transactions, ＋, Spending, Ask). Both come from `AppShell`.
+- Desktop: links in the header plus a teal Add button. Mobile: bottom tab bar (Home, Spending, ＋, Invest, Ask); Transactions is reached from Home's recent list and Spending's "All transactions" link. Both come from `AppShell`.
 - Old routes `/top-categories`, `/top-vendors`, `/monthly-insights` redirect (`next.config.ts`).
 
 ## Git and workflow
