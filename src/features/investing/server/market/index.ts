@@ -30,6 +30,9 @@ const PRICE_CACHE = { freshMs: 5 * MINUTE, keepMs: 3 * 24 * 60 * MINUTE };
 const NEWS_CACHE = { freshMs: 15 * MINUTE, keepMs: 24 * 60 * MINUTE };
 /** One year plus a margin, fetched once per symbol and sliced per range. */
 const HISTORY_DAYS = 380;
+/** About five years, for indicators (200-day average) and historical pattern tests. Fresh for an hour. */
+const LONG_HISTORY_DAYS = 5 * 366;
+const LONG_CACHE = { freshMs: 60 * MINUTE, keepMs: 3 * 24 * 60 * MINUTE };
 
 function rangeStart(range: PriceRange, today = new Date()) {
   switch (range) {
@@ -82,4 +85,11 @@ export async function getNews(tickers: string[], limit = 12): Promise<{ articles
   const key = `mkt:${provider.id}:news:${[...tickers].sort().join(',') || 'market'}:${limit}`;
   const articles = await cached(key, NEWS_CACHE, () => provider.news(tickers, limit));
   return { articles, sandbox: provider.sandbox };
+}
+
+/** Up to ~5 years of daily closes for one symbol (less if the plan or the listing is younger). Empty if unknown. */
+export async function getLongHistory(symbol: string) {
+  const provider = getMarketProvider();
+  const points = await cached(`mkt:${provider.id}:daily5y:${symbol}`, LONG_CACHE, () => provider.dailyCloses(symbol, LONG_HISTORY_DAYS));
+  return { points, sandbox: provider.sandbox, freshness: provider.freshness };
 }

@@ -72,6 +72,7 @@ and understand their spending. Freemium: free tier with usage caps, paid tier.
 
 | Status | Item | Notes |
 |---|---|---|
+| 🚧 | Ask: market trend tools (moving averages, RSI, support/resistance, historical pattern tests) | Information, not advice; meaningful once real market data is connected |
 | 📋 | Investing: link brokerage and 401(k) accounts (Plaid Investments) | Needs Plaid production; file upload as the fallback |
 | 📋 | Investing: holdings file upload (brokerage CSV) | Fallback for 401(k) providers Plaid doesn't cover |
 | 📋 | Net worth over time; Claude portfolio insights (fees, concentration, employer match) | Explain and flag only, never recommend trades; legal review before charging |

@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { EXPENSE_CATEGORIES } from '@/features/expenses/constants';
 import { ExpenseCategory } from '@/features/expenses/types';
+import { PATTERN_CONDITIONS } from '@/features/investing/lib/technicals';
 
 /*
  * Tools the assistant can call. One zod schema per tool is the single source of truth:
  * the server converts it to JSON Schema for Claude, and the browser (which runs the
- * tools, because the data lives in localStorage) validates Claude's input against it.
+ * tools, against the cached expenses and our market-data API) validates Claude's input against it.
  * Client-safe: no SDK imports.
  */
 
@@ -79,6 +80,26 @@ export const ProposeChangesInput = z.object({
     .max(50),
 });
 
+const ticker = z
+  .string()
+  .regex(/^[A-Za-z][A-Za-z0-9.-]{0,9}$/)
+  .describe('Ticker symbol, e.g. SPY (S&P 500 fund), QQQ (Nasdaq-100 fund), DIA (Dow), IWM (Russell 2000), AAPL');
+
+export const MarketTrendInput = z.object({ symbol: ticker });
+
+export const MarketPatternInput = z.object({
+  symbol: ticker,
+  condition: z.enum(PATTERN_CONDITIONS).describe(
+    'The event to test. "50d"/"200d" are the 50- and 200-day simple moving averages. golden_cross / death_cross: the 50-day crossing above / below the 200-day. *_level conditions need `level`.'
+  ),
+  horizon_days: z.number().int().min(5).max(250).optional().describe('Trading days after each event to measure the return over (21 ≈ 1 month, 63 ≈ 3 months). Default 20.'),
+  level: z.number().positive().optional().describe('Price level for crosses_above_level / crosses_below_level, in dollars.'),
+});
+
+export const MyHoldingsInput = z.object({});
+
+export type MarketTrendInput = z.infer<typeof MarketTrendInput>;
+export type MarketPatternInput = z.infer<typeof MarketPatternInput>;
 export type QueryExpensesInput = z.infer<typeof QueryExpensesInput>;
 export type SummarizeSpendingInput = z.infer<typeof SummarizeSpendingInput>;
 export type ProposeChangesInput = z.infer<typeof ProposeChangesInput>;
@@ -110,6 +131,20 @@ export const ASSISTANT_TOOLS = {
     schema: BudgetStreakInput,
     description:
       'Number of consecutive days, ending today, on which daily spending stayed within the given budget.',
+  },
+  get_market_trend: {
+    schema: MarketTrendInput,
+    description:
+      'Technical picture for one ticker from up to ~5 years of daily closes: price, returns (1d to 1y, YTD), 20/50/200-day moving averages and how far the price is from each, RSI(14), 52-week high/low, volatility, 1-year max drawdown, nearby support and resistance levels (from swing highs/lows), the overall trend, and recent moving-average crossings.',
+  },
+  test_market_pattern: {
+    schema: MarketPatternInput,
+    description:
+      "Historical base rates for one ticker: every past time the condition happened, what the return was over the following horizon_days, compared with the same horizon from any day (the baseline). Also the most recent occurrences and whether one is in progress. Use it to say what has tended to follow a signal, with the sample size, instead of relying on general rules of thumb.",
+  },
+  get_my_holdings: {
+    schema: MyHoldingsInput,
+    description: "The user's investment holdings as they entered them: ticker, shares, account (Brokerage, 401(k), IRA...) and total cost if given. No prices; use get_market_trend for those.",
   },
   propose_changes: {
     schema: ProposeChangesInput,
