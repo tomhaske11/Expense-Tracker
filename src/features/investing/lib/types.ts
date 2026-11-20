@@ -70,16 +70,38 @@ export type NewsNotes = z.infer<typeof NewsNotesSchema>;
 export const ACCOUNTS = ['Brokerage', '401(k)', 'IRA', 'Roth IRA', 'HSA', 'Other'] as const;
 export type InvestmentAccount = (typeof ACCOUNTS)[number];
 
+/** A position, calculated from trades (see ledger.ts). */
 export interface Holding {
-  /** Client-generated. */
+  /** `${symbol}|${account}`. */
   id: string;
   symbol: string;
   shares: number;
   /** What the whole position cost, if known. */
   costBasis: number | null;
   account: InvestmentAccount;
+}
+
+export const TRADE_TYPES = ['buy', 'sell', 'dividend'] as const;
+export type TradeType = (typeof TRADE_TYPES)[number];
+
+export interface Trade {
+  /** Client-generated. */
+  id: string;
+  /** yyyy-MM-dd */
+  date: string;
+  type: TradeType;
+  symbol: string;
+  account: InvestmentAccount;
+  /** Buys and sells. */
+  shares: number | null;
+  /** Per share. Null only on an opening buy whose cost isn't known. */
+  price: number | null;
+  fees: number;
+  /** Dividends: cash received. */
+  amount: number | null;
+  note: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export type HoldingInput = Pick<Holding, 'symbol' | 'shares' | 'costBasis' | 'account'>;
+export type TradeInput = Omit<Trade, 'id' | 'createdAt' | 'updatedAt'>;

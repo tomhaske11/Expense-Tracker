@@ -10,10 +10,10 @@ Each place in the app answers one question:
 | Destination | Answers | What's there |
 |---|---|---|
 | **Home** (`/`) | How are my investments doing? | Index trends (S&P 500, Nasdaq-100, Dow, Russell 2000), your holdings by account (brokerage, 401(k), IRA), a watchlist, and news with Claude's "why it matters" notes |
-| **Transactions** (`/transactions`) | What did I spend, and is it right? | Every expense with search and filters; edit in place; delete; one-click clean-up by Claude |
+| **Transactions** (`/transactions`) | What did I buy, sell and earn? | Your buys, sells and dividends by account, with realized gains (average cost); holdings on Home are calculated from these |
 | **Spending** (`/spending`) | Where does my money go over time? | One period picker (opens on this month) and a Category / Vendor / Month switch |
 | **Ask** (`/assistant`) | Answer a question about my money | Chat with Claude about your expenses, your holdings and market trends (moving averages, RSI, support and resistance, and what has historically followed a signal); spending edits need your approval |
-| **＋ Add** (`/add`, `/import`) | Record something | Type it in plain words, scan a receipt, fill in the form, or import from a connected bank or a statement (CSV, OFX, PDF) |
+| **＋ Add** (`/add`, `/import`) | Record something | An expense (type it in plain words, scan a receipt, fill in the form, or import from a connected bank or a statement), or a trade |
 | **Account** (`/account`) | Manage my account and data | Sign out, connected banks (link, disconnect), password, backup and restore, export (CSV, JSON, PDF), delete account |
 
 On desktop these are in the header; on mobile there's a bottom tab bar with Add in the middle.

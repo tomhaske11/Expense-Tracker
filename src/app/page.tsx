@@ -4,8 +4,8 @@ import { useMemo, useState } from 'react';
 import AppShell, { PageTitle } from '@/app/_components/AppShell';
 import { INDEX_SYMBOLS, DISCLAIMER } from '@/features/investing/lib/markets';
 import { summarizePortfolio } from '@/features/investing/lib/portfolio';
-import type { HoldingInput, PriceRange } from '@/features/investing/lib/types';
-import { useHoldings } from '@/features/investing/hooks/useHoldings';
+import type { PriceRange } from '@/features/investing/lib/types';
+import { useTrades } from '@/features/investing/hooks/useTrades';
 import { useWatchlist } from '@/features/investing/hooks/useWatchlist';
 import { lookUpSymbol, usePrices } from '@/features/investing/hooks/useMarketData';
 import MarketOverview from '@/features/investing/components/MarketOverview';
@@ -19,7 +19,7 @@ const notFound = (symbol: string) => `Couldn't find a price for ${symbol}. Check
 /** Home: how are my investments doing, and what's moving the market? */
 export default function HomePage() {
   const [range, setRange] = useState<PriceRange>('1M');
-  const holdings = useHoldings();
+  const holdings = useTrades();
   const watchlist = useWatchlist();
   const loading = holdings.holdings === null || watchlist.symbols === null;
 
@@ -33,16 +33,6 @@ export default function HomePage() {
     const byValue = holdings.holdings && priceMap ? summarizePortfolio(holdings.holdings, priceMap).positions.map((p) => p.holding.symbol) : owned;
     return [...new Set([...byValue, ...(watchlist.symbols ?? [])])].slice(0, 5);
   }, [holdings.holdings, priceMap, owned, watchlist.symbols]);
-
-  const add = async (input: HoldingInput) => {
-    try {
-      if (!priceMap?.[input.symbol] && !(await lookUpSymbol(input.symbol))) return notFound(input.symbol);
-    } catch (error) {
-      return error instanceof Error ? error.message : notFound(input.symbol);
-    }
-    await holdings.addHolding(input);
-    return null;
-  };
 
   const addWatch = async (symbol: string) => {
     try {
@@ -69,12 +59,6 @@ export default function HomePage() {
           holdings={holdings.holdings ?? []}
           prices={priceMap}
           error={holdings.error}
-          onAdd={add}
-          onUpdate={async (id, input) => {
-            await holdings.updateHolding(id, input);
-            return null;
-          }}
-          onRemove={(id) => void holdings.removeHolding(id)}
         />
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.6fr] gap-6 items-start">
           <Watchlist symbols={watchlist.symbols ?? []} prices={priceMap} error={watchlist.error} onAdd={addWatch} onRemove={(s) => void watchlist.remove(s)} />

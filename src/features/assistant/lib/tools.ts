@@ -98,6 +98,8 @@ export const MarketPatternInput = z.object({
 
 export const MyHoldingsInput = z.object({});
 
+export const MyTradesInput = z.object({ symbol: ticker.optional().describe('Only trades in this ticker') });
+
 export type MarketTrendInput = z.infer<typeof MarketTrendInput>;
 export type MarketPatternInput = z.infer<typeof MarketPatternInput>;
 export type QueryExpensesInput = z.infer<typeof QueryExpensesInput>;
@@ -144,7 +146,11 @@ export const ASSISTANT_TOOLS = {
   },
   get_my_holdings: {
     schema: MyHoldingsInput,
-    description: "The user's investment holdings as they entered them: ticker, shares, account (Brokerage, 401(k), IRA...) and total cost if given. No prices; use get_market_trend for those.",
+    description: "The user's open positions, calculated from their trades with the average-cost method: ticker, shares, account (Brokerage, 401(k), IRA...) and remaining cost, plus total realized gains and dividends. No prices; use get_market_trend for those.",
+  },
+  get_my_trades: {
+    schema: MyTradesInput,
+    description: "The user's investment trades, newest first: date, buy/sell/dividend, ticker, account, shares, price, fees, dividend amount, and the realized gain on each sell.",
   },
   propose_changes: {
     schema: ProposeChangesInput,

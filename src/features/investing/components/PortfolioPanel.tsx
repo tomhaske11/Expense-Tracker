@@ -1,21 +1,17 @@
 'use client';
 
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useMemo } from 'react';
+import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
-import { EditIcon, PlusIcon, TrashIcon } from '@/lib/icons';
+import { PlusIcon } from '@/lib/icons';
 import { summarizePortfolio, formatShare } from '@/features/investing/lib/portfolio';
-import type { Holding, HoldingInput, PricesResponse } from '@/features/investing/lib/types';
+import type { Holding, PricesResponse } from '@/features/investing/lib/types';
 import Change from '@/features/investing/components/Change';
-import HoldingForm from '@/features/investing/components/HoldingForm';
 
 interface PortfolioPanelProps {
   holdings: Holding[];
   prices: PricesResponse['prices'] | null;
   error: string | null;
-  /** Each resolves to an error message, or null when saved. */
-  onAdd: (input: HoldingInput) => Promise<string | null>;
-  onUpdate: (id: string, input: HoldingInput) => Promise<string | null>;
-  onRemove: (id: string) => void;
 }
 
 function Stat({ label, children }: { label: string; children: ReactNode }) {
@@ -27,61 +23,40 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Your investments: value, today's change, gain, the split by account, and each position. */
-export default function PortfolioPanel({ holdings, prices, error, onAdd, onUpdate, onRemove }: PortfolioPanelProps) {
-  const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
+/**
+ * Your investments: value, today's change, gain, the split by account, and each position.
+ * Positions are calculated from trades; they change by recording a trade on Transactions.
+ */
+export default function PortfolioPanel({ holdings, prices, error }: PortfolioPanelProps) {
   const summary = useMemo(() => summarizePortfolio(holdings, prices ?? {}), [holdings, prices]);
   const priced = prices !== null;
-
-  const add = async (input: HoldingInput) => {
-    const message = await onAdd(input);
-    if (!message) setAdding(false);
-    return message;
-  };
-  const update = async (id: string, input: HoldingInput) => {
-    const message = await onUpdate(id, input);
-    if (!message) setEditing(null);
-    return message;
-  };
 
   return (
     <section className="bg-panel border border-line rounded-lg p-6">
       <div className="flex items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold text-ink">Your portfolio</h2>
-        {holdings.length > 0 && !adding && (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-ink rounded-full hover:bg-accent-strong transition-colors text-sm font-medium"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Add holding
-          </button>
-        )}
+        <Link
+          href="/transactions?new=1"
+          className="flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-ink rounded-full hover:bg-accent-strong transition-colors text-sm font-medium"
+        >
+          <PlusIcon className="w-4 h-4" />
+          Record a trade
+        </Link>
       </div>
 
       {holdings.length === 0 ? (
-        <div className="mb-2">
-          <p className="text-ink-muted mb-4">
-            Add what you own, in a brokerage account, 401(k) or IRA, to see its value and how it moves each day. Holdings stay in your account; only ticker symbols are used to look up prices.
-          </p>
-          <HoldingForm onSubmit={add} />
-        </div>
+        <p className="text-ink-muted">
+          Record what you&apos;ve bought, in a brokerage account, 401(k) or IRA, and your positions show up here with their value and how they move each day.{' '}
+          <Link href="/transactions?new=1" className="text-accent hover:text-accent-strong">Record your first buy</Link>.
+        </p>
       ) : (
         <>
-          {adding && (
-            <div className="mb-6 rounded-lg border border-line p-4">
-              <HoldingForm onSubmit={add} onCancel={() => setAdding(false)} />
-            </div>
-          )}
-
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
             <Stat label="Value">{priced ? formatCurrency(summary.value) : '…'}</Stat>
             <Stat label="Today">{priced ? <Change amount={summary.dayChange} percent={summary.dayChangePercent} /> : '…'}</Stat>
             <Stat label="Total gain">
               {summary.gain === null ? (
-                <span className="text-sm font-normal text-ink-muted">Add what you paid to see gains</span>
+                <span className="text-sm font-normal text-ink-muted">Add buy prices to see gains</span>
               ) : (
                 <Change amount={summary.gain} percent={summary.gainPercent ?? undefined} />
               )}
@@ -108,13 +83,8 @@ export default function PortfolioPanel({ holdings, prices, error, onAdd, onUpdat
           )}
 
           <ul className="divide-y divide-line border-t border-line">
-            {summary.positions.map((p) =>
-              editing === p.holding.id ? (
-                <li key={p.holding.id} className="py-4">
-                  <HoldingForm initial={p.holding} onSubmit={(input) => update(p.holding.id, input)} onCancel={() => setEditing(null)} />
-                </li>
-              ) : (
-                <li key={p.holding.id} className="py-3 grid grid-cols-[1fr_auto] sm:grid-cols-[minmax(8rem,1.2fr)_1fr_1fr_1fr_auto] gap-x-4 gap-y-1 items-center">
+            {summary.positions.map((p) => (
+              <li key={p.holding.id} className="py-3 grid grid-cols-[1fr_auto] sm:grid-cols-[minmax(8rem,1.2fr)_1fr_1fr_1fr] gap-x-4 gap-y-1 items-center">
                   <div>
                     <p className="text-ink font-medium">{p.holding.symbol}</p>
                     <p className="text-xs text-ink-muted">
@@ -135,17 +105,8 @@ export default function PortfolioPanel({ holdings, prices, error, onAdd, onUpdat
                     <span className="text-xs text-ink-muted sm:hidden">Gain </span>
                     {p.gain !== null ? <Change amount={p.gain} percent={p.gainPercent ?? undefined} /> : <span className="text-ink-faint">—</span>}
                   </div>
-                  <div className="col-span-2 sm:col-span-1 flex gap-1 justify-end">
-                    <button type="button" onClick={() => setEditing(p.holding.id)} aria-label={`Edit ${p.holding.symbol}`} className="p-2 rounded-full text-ink-muted hover:text-accent">
-                      <EditIcon className="w-4 h-4" />
-                    </button>
-                    <button type="button" onClick={() => onRemove(p.holding.id)} aria-label={`Remove ${p.holding.symbol}`} className="p-2 rounded-full text-ink-muted hover:text-red-400">
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
-                  </div>
                 </li>
-              )
-            )}
+            ))}
           </ul>
           {summary.unpriced.length > 0 && priced && (
             <p className="mt-3 text-sm text-amber-300">No price found for {summary.unpriced.join(', ')}; they&apos;re left out of the totals.</p>
