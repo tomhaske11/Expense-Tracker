@@ -10,10 +10,10 @@ import { Brand } from '@/app/_components/Brand';
 /*
  * The signed-in app's frame. Each destination answers one question:
  *   Home          how are my investments doing, and what's moving the market?
- *   Transactions  what did I spend, and is it right?
+ *   Transactions  what did I buy, sell and earn in dividends? (holdings are calculated from these)
  *   Spending      where does my money go over time?
  *   Ask           answer a question about my money
- *   Add           record something (an action: typed, receipt, manual, or import)
+ *   Add           record something (an action: an expense, typed, receipt, manual or imported; or a trade)
  *   Account       manage my account and my data (behind the profile icon)
  * Desktop shows these in the header; mobile shows a bottom tab bar with Add in the middle.
  */

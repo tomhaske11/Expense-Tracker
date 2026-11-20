@@ -11,12 +11,12 @@
 ## 2. Main features (`src/features/`)
 | Feature | Does | Routes |
 |---|---|---|
-| `expenses/` (core) | Data model, the Supabase-backed store, CRUD, search/filter, quick add (text or receipt photo), edit dialog, recent list | `/transactions`, `/add` |
+| `expenses/` (core) | Data model, the Supabase-backed store, CRUD, filters, quick add (text or receipt photo). There's no list of individual expenses; they're fixed through Ask's proposals | `/add` |
 | `analytics/` | All metrics (`stats.ts`); the Spending explorer (category / vendor / month over a period, opening on this month) | `/spending` |
 | `export/` | Backup download and restore (versioned JSON), CSV/JSON/PDF export modal, one-time import of pre-accounts browser data | `/account` (Your data, and the one-time import offer) |
 | `imports/` | Bank linking (sandbox provider today), bank sync and statement upload (CSV/OFX/PDF) → shared pipeline → review → save | `/import`; banks are linked and disconnected in `/account` (Connected banks) |
-| `investing/` | Market overview (index funds), holdings entered by hand, watchlist, news with Claude's "why it matters" notes. Market data comes from a provider behind a shared cache | `/` (Home) |
-| `assistant/` | "Ask your money" chat and one-click clean-up; tools run in the browser (spending tools on the cached expenses; market tools call `/api/markets/analysis`); edits are proposals the user approves | `/assistant` (Ask), clean-up on `/transactions` |
+| `investing/` | Market overview (index funds), trades (buys, sells, dividends) and the holdings calculated from them (average cost), watchlist, news with Claude's "why it matters" notes. Market data comes from a provider behind a shared cache | `/` (Home), `/transactions` |
+| `assistant/` | "Ask your money" chat and one-click clean-up; tools run in the browser (spending tools on the cached expenses; market tools call `/api/markets/analysis`); edits are proposals the user approves | `/assistant` (Ask, including the clean-up button) |
 
 Account pages live in `src/app`: `/login`, `/signup`, `/forgot-password`, `/auth/confirm` (email-link route), `/account` (sign out, connected banks, your data, change password, delete account), `/account/password`.
 
@@ -43,7 +43,7 @@ src/
       hooks/useExpenses.ts the Supabase-backed expense store + CRUD (see Rules)
       lib/filters.ts       date/category/search filters
       lib/quickAdd.ts, lib/receiptImage.ts; server/parseExpenseText.ts (Claude)
-      components/          ExpenseForm, ExpenseList, EditExpenseDialog, QuickAddInput, CategoryIcon
+      components/          ExpenseForm, QuickAddInput, CategoryIcon
     analytics/             AGGREGATION, CHARTS, COACH
       lib/stats.ts         all metrics
       components/          SpendingExplorer, CategoryBreakdown (donut + list), VendorCard
@@ -55,12 +55,13 @@ src/
       components/          ImportCenter (sync + upload + review), ImportReview, BankConnectionsPanel + ConnectBankDialog (Account)
     investing/             MARKETS & PORTFOLIO (docs/dev/investing.md)
       lib/types.ts, markets.ts (index funds, disclaimer), portfolio.ts (summarizePortfolio, formatPercent),
+                           ledger.ts (trades → positions, realized gains, dividends; average cost),
                            technicals.ts (moving averages, RSI, levels, computeTrend, testPattern), analysis.ts (request schemas)
-      hooks/               useHoldings, useWatchlist (Supabase), useMarketData (usePrices, useNews, useNewsNotes)
+      hooks/               useTrades (trades + derived holdings), useWatchlist (Supabase), useMarketData (usePrices, useNews, useNewsNotes)
       server/market/       MarketDataProvider, mock + Massive providers, cached getPrices/getNews; server/newsNotes.ts (Claude)
-      components/          MarketOverview, PortfolioPanel, HoldingForm, Watchlist, NewsFeed, PriceChart, Sparkline, Change
+      components/          MarketOverview, PortfolioPanel (read-only positions), TradeForm, TradeList, Watchlist, NewsFeed, PriceChart, Sparkline, Change
     assistant/             CHAT AGENT: lib/ (tools, runTools, protocol, cleanup), hooks/useAssistantChat.ts (tool loop),
-                           server/streamAssistantTurn.ts, components/ (AssistantChat, AssistantTranscript, ProposalCard, CleanupPanel)
+                           server/streamAssistantTurn.ts, components/ (AssistantChat, AssistantTranscript, ProposalCard)
   integrations/
     anthropic/             server-only Claude client, CLAUDE_MODEL ('claude-opus-5-5'), describeAnthropicError
     supabase/              env.ts, browser.ts (browser client), server.ts (requireUser, admin client)
@@ -73,7 +74,7 @@ docs/dev/, docs/user/      implementation docs (accounts, bank import, ...) and 
 **Import direction:** `app → assistant → investing → analytics → export → imports → expenses → lib`. (`investing` doesn't use the expense features today.) Never import upward.
 - `lib/` and `integrations/` import no feature. A helper that needs `Expense` belongs in a feature.
 - `integrations/anthropic`, `getSupabaseAdmin()` and the bank layer are server-only (`import 'server-only'`); only `server/` folders and `src/app/api/` use them. Client code may only `import type` from the Anthropic SDK.
-- The Supabase **browser** client (`integrations/supabase/browser.ts`) is used by the data-layer hooks (`useExpenses`, `useHoldings`, `useWatchlist`) and the account pages. Don't query Supabase from other components; add to a hook instead.
+- The Supabase **browser** client (`integrations/supabase/browser.ts`) is used by the data-layer hooks (`useExpenses`, `useTrades`, `useWatchlist`) and the account pages. Don't query Supabase from other components; add to a hook instead.
 - Import across features by full path. Don't add barrel `index.ts` files.
 
 **Where new code goes:**
@@ -124,6 +125,12 @@ npx tsc --noEmit   # run after a build or dev run (route types are generated in 
 - `importExpenses(records, 'merge' | 'replace')` is the bulk path (restores, imports, local-data import).
 - Pre-accounts data in `localStorage` is only read for the one-time import offer (`readLocalExpenses`) and is never modified or deleted.
 
+**Trades and holdings**
+- Holdings are never stored: `computeLedger` (`investing/lib/ledger.ts`) derives them from `public.trades` in date order with the average-cost method. Realized gain on a sell = proceeds − fees − average cost × shares.
+- Before saving a new, edited or deleted trade, run `computeLedger` on the resulting list and refuse it if `problem` is set (a sell larger than what was held then).
+- A buy may have a null price (an opening balance with unknown cost); positions that include one have unknown cost and gain.
+- `public.holdings` is legacy (copied into opening buys by `20261121120000_trades.sql`) and unused.
+
 **Data shape**
 - `Expense` fields: `id` (client-generated), `date` (`yyyy-MM-dd`), `amount` (number, USD), `category`, `description`, `createdAt` / `updatedAt` (ISO), optional `source` (`kind`, `externalId`, `connectionId`, `accountId`, `rawDescription`) on imported expenses. Keep `source` on edits; it's what stops re-imports.
 - Database columns are snake_case (`created_at`, `user_id`); the hook maps them. `amount` is `numeric(12,2)`; convert with `Number()`.
@@ -168,10 +175,10 @@ Each destination answers one question; don't put the same thing in two places.
 | Destination | Question | Route |
 |---|---|---|
 | Home | How are my investments doing, and what's moving the market? | `/` |
-| Transactions | What did I spend, and is it right? | `/transactions` |
+| Transactions | What did I buy, sell and earn in dividends? | `/transactions` (`?new=1` opens the form) |
 | Spending | Where does my money go over time? | `/spending` (`?view=vendor` / `month`) |
 | Ask | Answer a question about my money | `/assistant` |
-| Add (action) | Record something | `/add`, `/import` |
+| Add (action) | Record something | `/add`, `/import`; links to recording a trade |
 | Account (profile icon) | Manage my account, connected banks and data | `/account` (`#banks`) |
 - Desktop: links in the header plus a teal Add button. Mobile: bottom tab bar (Home, Transactions, ＋, Spending, Ask). Both come from `AppShell`.
 - Old routes `/top-categories`, `/top-vendors`, `/monthly-insights`, `/invest` redirect (`next.config.ts`).

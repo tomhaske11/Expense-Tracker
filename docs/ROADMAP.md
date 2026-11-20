@@ -27,6 +27,7 @@ and understand their spending. Freemium: free tier with usage caps, paid tier.
 | Bank linking moved to Account → Connected banks | 2026-11-19 | #17 |
 | Investing: markets, holdings by hand, watchlist, news with Claude notes (sandbox data until a key is set) | 2026-11-20 | #18 |
 | Home becomes the investments page; spending chart lives on Spending; budget coach, monthly overview and the daily budget setting removed (backup format v2) | 2026-11-20 | — |
+| Transactions tab becomes investment trades (buys, sells, dividends); holdings calculated from trades; expense list removed | 2026-11-21 | — |
 
 ## Production readiness
 
@@ -74,10 +75,10 @@ and understand their spending. Freemium: free tier with usage caps, paid tier.
 |---|---|---|
 | 🚧 | Ask: market trend tools (moving averages, RSI, support/resistance, historical pattern tests) | Information, not advice; meaningful once real market data is connected |
 | 📋 | Investing: link brokerage and 401(k) accounts (Plaid Investments) | Needs Plaid production; file upload as the fallback |
-| 📋 | Investing: holdings file upload (brokerage CSV) | Fallback for 401(k) providers Plaid doesn't cover |
+| 📋 | Investing: trade history upload (brokerage CSV) | Fallback for 401(k) providers Plaid doesn't cover; feeds the trades ledger |
 | 📋 | Net worth over time; Claude portfolio insights (fees, concentration, employer match) | Explain and flag only, never recommend trades; legal review before charging |
 | 📋 | Daily brief: morning push notification (portfolio, markets, budget left today) | Needs the iPhone app |
-| 📋 | Include holdings and watchlist in backups | `BACKUP_VERSION` bump |
+| 📋 | Include trades and watchlist in backups | `BACKUP_VERSION` bump |
 | 📋 | Subscriptions and recurring-charges view | Yearly cost, price increases |
 | 📋 | Category budgets with month-end forecast | "Food: $310 of $400, on pace for $520" |
 | 📋 | Weekly digest (email or push): portfolio and spending | Brings users back; the budget coach was removed from Home on 2026-11-20 |

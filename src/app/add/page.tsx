@@ -6,10 +6,10 @@ import { useExpenses } from '@/features/expenses/hooks/useExpenses';
 import { ExpenseFormData } from '@/features/expenses/types';
 import ExpenseForm from '@/features/expenses/components/ExpenseForm';
 import AppShell, { PageTitle } from '@/app/_components/AppShell';
-import { BankIcon, CheckCircleIcon, ChevronIcon } from '@/lib/icons';
+import { BankIcon, CheckCircleIcon, ChevronIcon, TrendIcon } from '@/lib/icons';
 import { formatCurrency } from '@/lib/utils';
 
-/** Add: the one place to record spending — typed, a receipt photo, by hand, or imported in bulk. */
+/** Add: the one place to record something: spending (typed, a receipt photo, by hand, or imported in bulk) or a trade. */
 export default function AddPage() {
   const { isLoading, addExpense } = useExpenses();
   const [added, setAdded] = useState<{ count: number; last: ExpenseFormData } | null>(null);
@@ -31,8 +31,8 @@ export default function AddPage() {
               Added {added.last.description} ({formatCurrency(Number(added.last.amount))})
               {added.count > 1 ? `, ${added.count} so far` : ''}.
             </p>
-            <Link href="/transactions" className="text-accent hover:text-accent-strong whitespace-nowrap">
-              View transactions
+            <Link href="/spending" className="text-accent hover:text-accent-strong whitespace-nowrap">
+              See spending
             </Link>
           </div>
         )}
@@ -52,6 +52,20 @@ export default function AddPage() {
           <span className="flex-1">
             <span className="block font-semibold text-ink">Import many at once</span>
             <span className="block text-sm text-ink-muted">Sync a connected bank or upload a statement (CSV, OFX or PDF).</span>
+          </span>
+          <ChevronIcon className="w-5 h-5 -rotate-90 text-ink-muted group-hover:text-accent" />
+        </Link>
+
+        <Link
+          href="/transactions?new=1"
+          className="mt-4 flex items-center gap-4 bg-panel border border-line rounded-lg p-6 hover:border-accent transition-colors group"
+        >
+          <span className="w-11 h-11 shrink-0 rounded-lg flex items-center justify-center bg-accent/10 text-accent">
+            <TrendIcon className="w-6 h-6" />
+          </span>
+          <span className="flex-1">
+            <span className="block font-semibold text-ink">Record an investment trade</span>
+            <span className="block text-sm text-ink-muted">A buy, sell or dividend in a brokerage account, 401(k) or IRA.</span>
           </span>
           <ChevronIcon className="w-5 h-5 -rotate-90 text-ink-muted group-hover:text-accent" />
         </Link>

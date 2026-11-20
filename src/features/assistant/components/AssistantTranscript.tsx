@@ -22,6 +22,7 @@ export const TOOL_LABELS: Record<string, string> = {
   get_market_trend: 'Checked market trend',
   test_market_pattern: 'Tested a market pattern',
   get_my_holdings: 'Looked up your holdings',
+  get_my_trades: 'Looked up your trades',
   propose_changes: 'Drafting proposed changes',
 };
 

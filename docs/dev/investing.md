@@ -8,7 +8,8 @@ real market data.
 | Piece | Component | Data |
 |---|---|---|
 | Markets: 4 index tiles + chart, 1M / 3M / YTD / 1Y | `MarketOverview` | `/api/markets/prices` |
-| Your portfolio: value, today, total gain, by account, positions | `PortfolioPanel`, `HoldingForm` | `public.holdings` + prices |
+| Your portfolio: value, today, total gain, by account, positions (read-only) | `PortfolioPanel` | positions from `public.trades` (`computeLedger`) + prices |
+| Transactions (`/transactions`): record/edit/delete buys, sells, dividends; open positions, cost, realized gains, dividends | `TradeForm`, `TradeList` | `public.trades` |
 | Watchlist | `Watchlist` | `public.watchlist` + prices |
 | News, "Your stocks" (top 5 holdings, then watchlist) or "Market" | `NewsFeed` | `/api/markets/news`, `/api/markets/news/notes` |
 
@@ -44,7 +45,8 @@ The assistant (`/assistant`) has three market tools, run in the browser like its
 |---|---|---|
 | `get_market_trend` | `POST /api/markets/analysis` `{kind:'trend'}` → `computeTrend` | price, returns (1d–1y, YTD), 20/50/200-day averages and distance, RSI(14), 52-week range, volatility, 1-year drawdown, support/resistance, trend label, recent crossings |
 | `test_market_pattern` | `{kind:'pattern'}` → `testPattern` | for a condition (crosses of the 50/200-day, golden/death cross, RSI 30/70, 10% off the high, new high, 5% drop in a week, crossing a price level): count, median/average return, % positive, best/worst over the horizon, vs the any-day baseline; recent occurrences; whether one is in progress |
-| `get_my_holdings` | the user's `holdings` rows | ticker, shares, account, total cost |
+| `get_my_holdings` | positions from the user's trades | ticker, shares, account, remaining cost, realized gains and dividends totals |
+| `get_my_trades` | the user's trades (optionally one ticker) | date, type, ticker, account, shares, price, fees, dividend amount, realized gain per sell |
 
 - History: up to ~5 years of daily closes per symbol (`getLongHistory`, cached an hour). Massive's
   free plan has 2 years, so pattern tests have smaller samples there; results state the range.
@@ -73,10 +75,15 @@ To add a provider: implement `MarketDataProvider` (`dailyCloses`, `news`), regis
 
 ## Schema
 
-`supabase/migrations/20261120120000_investing.sql`: `holdings` (symbol, shares, optional total
-`cost_basis`, `account` in Brokerage / 401(k) / IRA / Roth IRA / HSA / Other) and `watchlist`
-(user, symbol). Both RLS-limited to the owner; both deleted with the account. Not yet included
-in backups (roadmap).
+- `20261121120000_trades.sql`: `trades` (date, `type` buy / sell / dividend, symbol, account, `shares` and
+  `price` per share for buys and sells, `fees`, `amount` for dividends, note). A check constraint
+  enforces each type's shape; a buy may have no price (an opening balance with unknown cost). RLS:
+  own rows. It also copied existing `holdings` rows into opening buys (`opening-<holding id>`).
+- `20261120120000_investing.sql`: `watchlist` (user, symbol), and the legacy `holdings` table, which
+  the app no longer reads.
+- Holdings are calculated, never stored: `computeLedger` applies trades in date order with the
+  average-cost method. The app refuses a trade change that would sell more than was held.
+- Both tables are deleted with the account. Not yet included in backups (roadmap).
 
 ## Next steps
 

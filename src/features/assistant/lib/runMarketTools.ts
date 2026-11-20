@@ -1,15 +1,17 @@
 import type { ToolOutcome } from '@/features/assistant/lib/runTools';
-import { MarketPatternInput, MarketTrendInput, MyHoldingsInput } from '@/features/assistant/lib/tools';
+import { MarketPatternInput, MarketTrendInput, MyHoldingsInput, MyTradesInput } from '@/features/assistant/lib/tools';
 import type { AnalysisRequest } from '@/features/investing/lib/analysis';
-import { fetchHoldings } from '@/features/investing/hooks/useHoldings';
+import { fetchTradesAndHoldings } from '@/features/investing/hooks/useTrades';
+import { sortTrades } from '@/features/investing/lib/ledger';
 
 /*
  * The assistant's market tools, run in the browser. Indicators and pattern statistics come
  * from /api/markets/analysis (computed on the server from cached prices); holdings come from
- * the user's own rows in Supabase.
+ * the user's trades in Supabase (positions are calculated from them).
  */
 
-export const MARKET_TOOLS = new Set(['get_market_trend', 'test_market_pattern', 'get_my_holdings']);
+export const MARKET_TOOLS = new Set(['get_market_trend', 'test_market_pattern', 'get_my_holdings', 'get_my_trades']);
+const MAX_TRADES = 200;
 
 async function analyze(request: AnalysisRequest): Promise<ToolOutcome> {
   try {
@@ -42,16 +44,50 @@ export async function runMarketTool(name: string, rawInput: unknown): Promise<To
     case 'get_my_holdings': {
       if (!MyHoldingsInput.safeParse(rawInput ?? {}).success) return { ok: false, error: 'This tool takes no input.' };
       try {
-        const holdings = await fetchHoldings();
+        const { holdings, ledger } = await fetchTradesAndHoldings();
         return {
           ok: true,
           result: {
             count: holdings.length,
-            holdings: holdings.map((h) => ({ symbol: h.symbol, shares: h.shares, account: h.account, total_cost: h.costBasis })),
+            holdings: holdings.map((h) => ({ symbol: h.symbol, shares: h.shares, account: h.account, remaining_cost: h.costBasis })),
+            realized_gains_total: ledger.realizedTotal,
+            dividends_total: ledger.dividendsTotal,
+            note: 'Calculated from the user\'s trades (average cost). remaining_cost is null when a buy had no price.',
           },
         };
       } catch {
         return { ok: false, error: "Couldn't load the user's holdings." };
+      }
+    }
+    case 'get_my_trades': {
+      const input = MyTradesInput.safeParse(rawInput ?? {});
+      if (!input.success) return { ok: false, error: input.error.issues[0]?.message ?? 'Invalid input.' };
+      try {
+        const { trades, ledger } = await fetchTradesAndHoldings();
+        const symbol = input.data.symbol?.toUpperCase();
+        const matching = sortTrades(trades)
+          .reverse()
+          .filter((t) => !symbol || t.symbol === symbol);
+        return {
+          ok: true,
+          result: {
+            count: matching.length,
+            trades: matching.slice(0, MAX_TRADES).map((t) => ({
+              date: t.date,
+              type: t.type,
+              symbol: t.symbol,
+              account: t.account,
+              shares: t.shares,
+              price: t.price,
+              fees: t.fees,
+              amount: t.amount,
+              ...(t.type === 'sell' && { realized_gain: ledger.realized[t.id] ?? null }),
+            })),
+            ...(matching.length > MAX_TRADES && { note: `Only the ${MAX_TRADES} most recent are listed.` }),
+          },
+        };
+      } catch {
+        return { ok: false, error: "Couldn't load the user's trades." };
       }
     }
     default:
