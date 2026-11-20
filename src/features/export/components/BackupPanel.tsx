@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { Expense } from '@/features/expenses/types';
 import { useExpenses } from '@/features/expenses/hooks/useExpenses';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 import { CheckCircleIcon, DownloadIcon, FileIcon } from '@/lib/icons';
 import { ExportService } from '@/features/export/lib/exportService';
 import {
@@ -17,9 +17,6 @@ import {
 
 interface BackupPanelProps {
   expenses: Expense[];
-  /** Current daily budget, saved in backups (owned by analytics, so passed in). */
-  dailyBudget: number;
-  onRestoreBudget: (amount: number) => void;
   onOpenExport: () => void;
 }
 
@@ -33,21 +30,20 @@ type Stage =
 const OUTLINE =
   'px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent hover:text-accent transition-colors text-sm font-medium flex items-center gap-2';
 
-function download(expenses: Expense[], dailyBudget: number, filename: string) {
-  ExportService.downloadFile(JSON.stringify(buildBackup(expenses, dailyBudget), null, 2), filename, 'application/json');
+function download(expenses: Expense[], filename: string) {
+  ExportService.downloadFile(JSON.stringify(buildBackup(expenses), null, 2), filename, 'application/json');
 }
 
 /** Download a backup, restore from one (with preview), and open the export modal. */
-export default function BackupPanel({ expenses, dailyBudget, onRestoreBudget, onOpenExport }: BackupPanelProps) {
+export default function BackupPanel({ expenses, onOpenExport }: BackupPanelProps) {
   const { importExpenses } = useExpenses();
   const [stage, setStage] = useState<Stage>({ kind: 'idle' });
-  const [restoreBudget, setRestoreBudget] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const empty = expenses.length === 0;
 
   const backUpNow = () => {
-    download(expenses, dailyBudget, backupFilename());
+    download(expenses, backupFilename());
     setStage({ kind: 'done', message: `Downloaded a backup of ${expenses.length} expenses.` });
   };
 
@@ -58,7 +54,6 @@ export default function BackupPanel({ expenses, dailyBudget, onRestoreBudget, on
     }
     try {
       const plan = planRestore(await file.text(), expenses);
-      setRestoreBudget(plan.dailyBudget !== null && plan.dailyBudget !== dailyBudget);
       setStage({ kind: 'preview', plan, fileName: file.name });
     } catch (error) {
       setStage({
@@ -71,20 +66,18 @@ export default function BackupPanel({ expenses, dailyBudget, onRestoreBudget, on
   const finish = (plan: RestorePlan, mode: 'merge' | 'replace') => {
     if (mode === 'replace' && expenses.length > 0) {
       // Safety net: keep a copy of what's about to be replaced.
-      download(expenses, dailyBudget, backupFilename().replace('backup', 'before-restore'));
+      download(expenses, backupFilename().replace('backup', 'before-restore'));
     }
     const added = mode === 'replace' ? plan.records.length : plan.newRecords.length;
     importExpenses(mode === 'replace' ? plan.records : plan.newRecords, mode);
-    const budgetRestored = restoreBudget && plan.dailyBudget !== null;
-    if (budgetRestored) onRestoreBudget(plan.dailyBudget!);
     setStage({
       kind: 'done',
       message:
-        (mode === 'replace'
+        mode === 'replace'
           ? `Replaced your data with ${added} expenses from the backup. A copy of your previous data was downloaded first.`
           : added === 0
             ? 'Nothing new to add: every expense in the backup is already here.'
-            : `Added ${added} expenses from the backup.`) + (budgetRestored ? ` Daily budget set to ${formatCurrency(plan.dailyBudget!)}.` : ''),
+            : `Added ${added} expenses from the backup.`,
     });
   };
 
@@ -147,9 +140,6 @@ export default function BackupPanel({ expenses, dailyBudget, onRestoreBudget, on
             plan={stage.plan}
             fileName={stage.fileName}
             currentCount={expenses.length}
-            dailyBudget={dailyBudget}
-            restoreBudget={restoreBudget}
-            onToggleBudget={setRestoreBudget}
             confirmingReplace={stage.kind === 'confirm-replace'}
             onMerge={() => finish(stage.plan, 'merge')}
             onReplace={() =>
@@ -176,9 +166,6 @@ interface RestorePreviewProps {
   plan: RestorePlan;
   fileName: string;
   currentCount: number;
-  dailyBudget: number;
-  restoreBudget: boolean;
-  onToggleBudget: (value: boolean) => void;
   confirmingReplace: boolean;
   onMerge: () => void;
   onReplace: () => void;
@@ -189,9 +176,6 @@ function RestorePreview({
   plan,
   fileName,
   currentCount,
-  dailyBudget,
-  restoreBudget,
-  onToggleBudget,
   confirmingReplace,
   onMerge,
   onReplace,
@@ -230,18 +214,6 @@ function RestorePreview({
         )}
       </ul>
 
-      {plan.dailyBudget !== null && plan.dailyBudget !== dailyBudget && (
-        <label className="flex items-center gap-2 text-sm text-ink-soft">
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-teal-400"
-            checked={restoreBudget}
-            onChange={(e) => onToggleBudget(e.target.checked)}
-          />
-          Also restore the daily budget ({formatCurrency(plan.dailyBudget)}, currently {formatCurrency(dailyBudget)})
-        </label>
-      )}
-
       {confirmingReplace ? (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 space-y-2">
           <p className="text-sm text-red-300">
@@ -266,7 +238,7 @@ function RestorePreview({
           <button
             type="button"
             onClick={onMerge}
-            disabled={plan.newRecords.length === 0 && !(restoreBudget && plan.dailyBudget !== null)}
+            disabled={plan.newRecords.length === 0}
             className="px-4 py-2 bg-accent text-accent-ink rounded-full hover:bg-accent-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
           >
             {currentCount === 0 ? `Restore ${plan.records.length} expenses` : `Add ${plan.newRecords.length} new`}

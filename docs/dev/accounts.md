@@ -21,7 +21,7 @@ the signed-in user's rows. The same model works for the web app and the Capacito
 | Table | Access | Notes |
 |---|---|---|
 | `expenses` | RLS: own rows (select/insert/update/delete) | PK `(user_id, id)`; `id` stays client-generated; `amount numeric(12,2) > 0`; category check; `source jsonb` for imports with a unique `(user_id, source->>'externalId')` index; in the `supabase_realtime` publication |
-| `user_settings` | RLS: own row | `daily_budget` |
+| `user_settings` | RLS: own row | `daily_budget`: no longer used by the app (the daily budget setting was removed on 2026-11-20); left in place |
 | `bank_connections` | RLS on, **no policies**: server secret key only | encrypted aggregator tokens, sync cursor |
 | `holdings` | RLS: own rows | symbol, shares, optional total `cost_basis`, `account`; from `20261120120000_investing.sql` |
 | `watchlist` | RLS: own rows (select/insert/delete) | PK `(user_id, symbol)` |
@@ -38,7 +38,6 @@ when the expense shape changes.
 | Server helpers: `getUserFromRequest` / `requireUser` (cookie **or** `Authorization: Bearer`), `getSupabaseAdmin` (secret key) | `integrations/supabase/server.ts` |
 | Gate: refreshes the session; pages → `/login`, `/api/*` → 401; Bearer requests pass to the route | `src/proxy.ts` |
 | Expenses store (optimistic writes with rollback, realtime refetch, sign-out clears cache) | `features/expenses/hooks/useExpenses.ts` |
-| Daily budget | `features/analytics/hooks/useDailyBudget.ts` (`user_settings`) |
 | Pages | `/login`, `/signup`, `/forgot-password`, `/auth/confirm` (route), `/account`, `/account/password` |
 | Account deletion (revokes bank tokens, then `auth.admin.deleteUser`) | `src/app/api/account/route.ts` |
 | One-time import of pre-accounts browser data | `features/export/components/LocalDataImport.tsx` |

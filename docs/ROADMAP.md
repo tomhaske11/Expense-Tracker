@@ -24,6 +24,9 @@ and understand their spending. Freemium: free tier with usage caps, paid tier.
 | Production deploy on Vercel (expenseai-omega.vercel.app) | 2026-11-18 | — |
 | Shared Claude rate limits (Upstash Redis) | 2026-11-18 | #15 |
 | Navigation redesign: one place per job, mobile tab bar | 2026-11-19 | #16 |
+| Bank linking moved to Account → Connected banks | 2026-11-19 | #17 |
+| Investing: markets, holdings by hand, watchlist, news with Claude notes (sandbox data until a key is set) | 2026-11-20 | #18 |
+| Home becomes the investments page; spending chart lives on Spending; budget coach, monthly overview and the daily budget setting removed (backup format v2) | 2026-11-20 | — |
 
 ## Production readiness
 
@@ -42,7 +45,7 @@ and understand their spending. Freemium: free tier with usage caps, paid tier.
 
 | Status | Item | Notes |
 |---|---|---|
-| 📋 | Cost breakdown per feature | Log input/output tokens per Claude call and show cost per feature (quick add, receipts, coach, assistant, clean-up, imports, news notes) |
+| 📋 | Cost breakdown per feature | Log input/output tokens per Claude call and show cost per feature (quick add, receipts, assistant, clean-up, imports, news notes) |
 | 📋 | Free-tier usage caps | Per-user monthly Claude allowance; clear messaging when reached |
 | 📋 | Billing (Stripe) and paid tier | Paid tier covers Claude and Plaid costs |
 | 📋 | Market-data plan for production | Massive Starter ($29/mo, 15-min delayed) for testing; showing data to the public needs a business licence; pick before launch |
@@ -69,7 +72,6 @@ and understand their spending. Freemium: free tier with usage caps, paid tier.
 
 | Status | Item | Notes |
 |---|---|---|
-| 🚧 | Investing, step 1–2: Invest tab (index trends, holdings by hand, watchlist, news with Claude notes), Home markets card | Sandbox data until a market-data key is set |
 | 📋 | Investing: link brokerage and 401(k) accounts (Plaid Investments) | Needs Plaid production; file upload as the fallback |
 | 📋 | Investing: holdings file upload (brokerage CSV) | Fallback for 401(k) providers Plaid doesn't cover |
 | 📋 | Net worth over time; Claude portfolio insights (fees, concentration, employer match) | Explain and flag only, never recommend trades; legal review before charging |
@@ -77,6 +79,6 @@ and understand their spending. Freemium: free tier with usage caps, paid tier.
 | 📋 | Include holdings and watchlist in backups | `BACKUP_VERSION` bump |
 | 📋 | Subscriptions and recurring-charges view | Yearly cost, price increases |
 | 📋 | Category budgets with month-end forecast | "Food: $310 of $400, on pace for $520" |
-| 📋 | Weekly coach digest (email or push) | Brings users back |
+| 📋 | Weekly digest (email or push): portfolio and spending | Brings users back; the budget coach was removed from Home on 2026-11-20 |
 | 📋 | Income tracking, savings rate | Net cash flow, not just spending |
 | 📋 | Tags, notes, split expenses, multi-currency | Smaller wins |

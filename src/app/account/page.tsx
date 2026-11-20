@@ -6,9 +6,9 @@ import { getSupabaseBrowser } from '@/integrations/supabase/browser';
 import { useExpenses } from '@/features/expenses/hooks/useExpenses';
 import AppShell from '@/app/_components/AppShell';
 import BackupPanel from '@/features/export/components/BackupPanel';
+import LocalDataImport from '@/features/export/components/LocalDataImport';
 import ExportModal from '@/features/export/components/ExportModal';
 import BankConnectionsPanel from '@/features/imports/components/BankConnectionsPanel';
-import { useDailyBudget } from '@/features/analytics/hooks/useDailyBudget';
 import { INPUT, LABEL } from '@/app/_components/AuthCard';
 import { LogOutIcon, TrashIcon } from '@/lib/icons';
 
@@ -18,7 +18,6 @@ const BUTTON = 'px-4 py-2 rounded-full text-sm font-medium transition-colors dis
 export default function AccountPage() {
   const router = useRouter();
   const { expenses, isLoading } = useExpenses();
-  const { dailyBudget, setDailyBudget } = useDailyBudget();
   const [exportOpen, setExportOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [password, setPassword] = useState('');
@@ -86,10 +85,11 @@ export default function AccountPage() {
           {/* A new connection opens Import, which syncs it and shows its transactions for review. */}
           <BankConnectionsPanel onConnected={() => router.push('/import')} />
 
+          {/* One-time offer to bring in expenses saved in this browser before accounts existed. */}
+          <LocalDataImport expenses={expenses} />
+
           <BackupPanel
             expenses={expenses}
-            dailyBudget={dailyBudget}
-            onRestoreBudget={setDailyBudget}
             onOpenExport={() => setExportOpen(true)}
           />
 

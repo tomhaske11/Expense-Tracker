@@ -21,7 +21,7 @@ export default function LocalDataImport({ expenses }: { expenses: Expense[] }) {
   const { importExpenses } = useExpenses();
   const [hidden, setHidden] = useState(false);
   const [done, setDone] = useState<string | null>(null);
-  // Planned once when the Dashboard mounts (expenses are loaded by then), so later edits
+  // Planned once when the Account page mounts (expenses are loaded by then), so later edits
   // don't re-open an offer the user already handled.
   const [{ uid, plan }] = useState(() => {
     const id = getCurrentUserId();

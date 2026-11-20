@@ -9,15 +9,14 @@ Each place in the app answers one question:
 
 | Destination | Answers | What's there |
 |---|---|---|
-| **Home** (`/`) | How am I doing this month? | Spent this month, daily average against your daily budget, budget streak, where the money went by category, Claude's budget coach, recent transactions |
+| **Home** (`/`) | How are my investments doing? | Index trends (S&P 500, Nasdaq-100, Dow, Russell 2000), your holdings by account (brokerage, 401(k), IRA), a watchlist, and news with Claude's "why it matters" notes |
 | **Transactions** (`/transactions`) | What did I spend, and is it right? | Every expense with search and filters; edit in place; delete; one-click clean-up by Claude |
-| **Spending** (`/spending`) | Where does my money go over time? | One period picker and a Category / Vendor / Month switch |
-| **Invest** (`/invest`) | How are my investments doing? | Index trends (S&P 500, Nasdaq-100, Dow, Russell 2000), your holdings by account (brokerage, 401(k), IRA), a watchlist, and news with Claude's "why it matters" notes |
+| **Spending** (`/spending`) | Where does my money go over time? | One period picker (opens on this month) and a Category / Vendor / Month switch |
 | **Ask** (`/assistant`) | Answer a question about my money | Chat with Claude over your expenses; any edits it suggests need your approval |
 | **＋ Add** (`/add`, `/import`) | Record something | Type it in plain words, scan a receipt, fill in the form, or import from a connected bank or a statement (CSV, OFX, PDF) |
 | **Account** (`/account`) | Manage my account and data | Sign out, connected banks (link, disconnect), password, backup and restore, export (CSV, JSON, PDF), delete account |
 
-On desktop these are in the header; on mobile there's a bottom tab bar (Home, Spending, Add, Invest, Ask). Home also shows a markets card.
+On desktop these are in the header; on mobile there's a bottom tab bar with Add in the middle.
 
 Categories: Food, Transportation, Entertainment, Shopping, Bills, Other.
 
@@ -44,7 +43,7 @@ src/
   app/            routes: /, transactions, spending, add, import, assistant, account, auth pages, api/*
   features/
     expenses/     core domain: types, the Supabase-backed store, filters, form, list
-    analytics/    stats, Home overview, Spending explorer, budget coach
+    analytics/    stats, Spending explorer
     export/       backup and restore, CSV / JSON / PDF export
     imports/      bank sync and statement upload
     investing/    markets, holdings, watchlist, news
