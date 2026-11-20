@@ -42,9 +42,10 @@ and understand their spending. Freemium: free tier with usage caps, paid tier.
 
 | Status | Item | Notes |
 |---|---|---|
-| 📋 | Cost breakdown per feature | Log input/output tokens per Claude call and show cost per feature (quick add, receipts, coach, assistant, clean-up, imports) |
+| 📋 | Cost breakdown per feature | Log input/output tokens per Claude call and show cost per feature (quick add, receipts, coach, assistant, clean-up, imports, news notes) |
 | 📋 | Free-tier usage caps | Per-user monthly Claude allowance; clear messaging when reached |
 | 📋 | Billing (Stripe) and paid tier | Paid tier covers Claude and Plaid costs |
+| 📋 | Market-data plan for production | Massive Starter ($29/mo, 15-min delayed) for testing; showing data to the public needs a business licence; pick before launch |
 | 📋 | Try Claude Haiku 5.5 for simple extraction | Quick add, receipts, import suggestions, column mapping; test quality first |
 
 ## Banking
@@ -68,6 +69,12 @@ and understand their spending. Freemium: free tier with usage caps, paid tier.
 
 | Status | Item | Notes |
 |---|---|---|
+| 🚧 | Investing, step 1–2: Invest tab (index trends, holdings by hand, watchlist, news with Claude notes), Home markets card | Sandbox data until a market-data key is set |
+| 📋 | Investing: link brokerage and 401(k) accounts (Plaid Investments) | Needs Plaid production; file upload as the fallback |
+| 📋 | Investing: holdings file upload (brokerage CSV) | Fallback for 401(k) providers Plaid doesn't cover |
+| 📋 | Net worth over time; Claude portfolio insights (fees, concentration, employer match) | Explain and flag only, never recommend trades; legal review before charging |
+| 📋 | Daily brief: morning push notification (portfolio, markets, budget left today) | Needs the iPhone app |
+| 📋 | Include holdings and watchlist in backups | `BACKUP_VERSION` bump |
 | 📋 | Subscriptions and recurring-charges view | Yearly cost, price increases |
 | 📋 | Category budgets with month-end forecast | "Food: $310 of $400, on pace for $520" |
 | 📋 | Weekly coach digest (email or push) | Brings users back |

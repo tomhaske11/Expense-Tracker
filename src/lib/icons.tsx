@@ -1,9 +1,12 @@
 import {
+  ArrowDownRight,
   ArrowLeft,
+  ArrowUpRight,
   Calendar,
   Camera,
   Car,
   ChartColumn,
+  ChartLine,
   ChartPie,
   Check,
   ChevronDown,
@@ -19,6 +22,7 @@ import {
   List,
   LogOut,
   MessageSquare,
+  Newspaper,
   Package,
   Pencil,
   Plus,
@@ -27,6 +31,7 @@ import {
   SendHorizontal,
   ShoppingBag,
   Sparkles,
+  Star,
   Square,
   Store,
   Trash2,
@@ -83,11 +88,16 @@ export const LogOutIcon = themed(LogOut, 'LogOut');
 export const BankIcon = themed(Landmark, 'Bank');
 export const UserIcon = themed(CircleUser, 'User');
 export const UploadIcon = themed(Upload, 'Upload');
+export const InvestIcon = themed(ChartLine, 'Invest');
+export const NewsIcon = themed(Newspaper, 'News');
+export const StarIcon = themed(Star, 'Star');
 
 // Stats
 export const WalletIcon = themed(Wallet, 'Wallet');
 export const CalendarIcon = themed(Calendar, 'Calendar');
 export const TrendIcon = themed(TrendingUp, 'Trend');
+export const UpIcon = themed(ArrowUpRight, 'Up');
+export const DownIcon = themed(ArrowDownRight, 'Down');
 export const TrophyIcon = themed(Trophy, 'Trophy');
 export const FileIcon = themed(FileText, 'File');
 

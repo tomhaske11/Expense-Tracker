@@ -11,6 +11,9 @@ export const CHART = {
   /** Text drawn on top of a colored slice. */
   onSlice: '#0a0a0a',
   accent: '#2dd4bf',
+  /** Price lines: up uses the accent; down is a soft red (always paired with a sign, never color alone). */
+  up: '#2dd4bf',
+  down: '#f87171',
   tooltip: {
     contentStyle: { background: '#1f1f1f', border: '1px solid #2a2a2a', borderRadius: 8, color: '#f5f5f5' },
     itemStyle: { color: '#d4d4d4' },

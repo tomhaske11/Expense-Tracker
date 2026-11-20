@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useExpenses } from '@/features/expenses/hooks/useExpenses';
 import SpendingExplorer, { type SpendingView } from '@/features/analytics/components/SpendingExplorer';
 import AppShell, { PageTitle } from '@/app/_components/AppShell';
+import { ListIcon } from '@/lib/icons';
 
 const VIEWS: SpendingView[] = ['category', 'vendor', 'month'];
 
@@ -14,7 +15,12 @@ export default function SpendingPage() {
   const { isLoading } = useExpenses();
   return (
     <AppShell loading={isLoading}>
-      <PageTitle title="Spending" subtitle="Where your money goes, by category, vendor or month." />
+      <PageTitle title="Spending" subtitle="Where your money goes, by category, vendor or month.">
+        <Link href="/transactions" className="self-start sm:self-auto flex items-center gap-2 px-4 py-2 rounded-full border border-line text-ink-soft hover:border-accent hover:text-accent transition-colors text-sm">
+          <ListIcon className="w-4 h-4" />
+          All transactions
+        </Link>
+      </PageTitle>
       {/* useSearchParams needs a Suspense boundary on a prerendered page. */}
       <Suspense>
         <Explorer />

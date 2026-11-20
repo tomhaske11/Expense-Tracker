@@ -1,7 +1,8 @@
 import 'server-only';
+import { hasRedis, redisPipeline } from '@/lib/redis';
 
 /*
- * Rate limits for the routes that spend the Anthropic API key.
+ * Rate limits for the routes that spend the Anthropic API key or the market-data quota.
  *
  * In production the counters live in Upstash Redis, shared by every Vercel function instance
  * (instances start and stop constantly, so in-memory counters would neither be shared nor
@@ -30,6 +31,8 @@ export const LIMITS = {
   claudePerDay: { max: 500, windowMs: DAY },
   /** Every route that calls Claude, all clients combined. */
   claudeGlobalPerDay: { max: 1500, windowMs: DAY },
+  /** Market data routes, per client (protects the shared market-data quota). */
+  marketPerMinute: { max: 120, windowMs: MINUTE },
 } satisfies Record<string, Limit>;
 
 type LimitName = keyof typeof LIMITS;
@@ -44,30 +47,15 @@ interface Check {
 /** Increment each key and return the new counts, in order. */
 type CounterStore = (checks: Check[], now: number) => Promise<number[]>;
 
-/** Upstash REST credentials: Vercel's integration uses KV_* names; Upstash's own use UPSTASH_REDIS_*. */
-function redisConfig(): { url: string; token: string } | null {
-  const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
-  return url && token ? { url: url.replace(/\/$/, ''), token } : null;
-}
-
-export const isSharedRateLimit = () => redisConfig() !== null;
+export const isSharedRateLimit = hasRedis;
 
 const redisStore: CounterStore = async (checks) => {
-  const config = redisConfig()!;
   // One pipeline: INCR + PEXPIRE per key. Expiry is the window length, so keys clean themselves up.
   const commands = checks.flatMap((c) => [
     ['INCR', c.key],
     ['PEXPIRE', c.key, String(c.limit.windowMs)],
   ]);
-  const res = await fetch(`${config.url}/pipeline`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${config.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(commands),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error(`Redis responded ${res.status}`);
-  const results = (await res.json()) as { result?: unknown; error?: string }[];
+  const results = await redisPipeline(commands);
   return checks.map((_, i) => {
     const r = results[i * 2];
     if (r?.error || typeof r?.result !== 'number') throw new Error(`Redis INCR failed: ${r?.error ?? 'no result'}`);
@@ -127,7 +115,7 @@ export async function rateLimit(
   } catch (error) {
     console.error('Rate limit store failed:', error);
     if (process.env.VERCEL_ENV === 'production') {
-      return Response.json({ error: 'Claude features are temporarily unavailable. Please try again shortly.' }, { status: 503 });
+      return Response.json({ error: 'This feature is temporarily unavailable. Please try again shortly.' }, { status: 503 });
     }
     return null;
   }
@@ -143,3 +131,7 @@ export async function rateLimit(
 /** The standard limits for a route that calls Claude. */
 export const limitClaudeRequest = (request: Request, userId?: string) =>
   rateLimit(request, [{ name: 'claudePerMinute' }, { name: 'claudePerDay' }, { name: 'claudeGlobalPerDay', global: true }], userId);
+
+/** The limit for a market-data route (prices, news). Cheap, but the provider quota is shared. */
+export const limitMarketRequest = (request: Request, userId?: string) =>
+  rateLimit(request, [{ name: 'marketPerMinute' }], userId);

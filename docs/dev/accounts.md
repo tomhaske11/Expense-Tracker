@@ -9,7 +9,7 @@ the signed-in user's rows. The same model works for the web app and the Capacito
 1. Create a project (US East for US users).
 2. **Project Settings → Data API:** the Data API must be on and `public` must be an exposed
    schema. (The app pins `db.schema = 'public'`, so the order of exposed schemas doesn't matter.)
-3. **SQL Editor:** run `supabase/migrations/20261118120000_init.sql`. It's idempotent.
+3. **SQL Editor:** run each file in `supabase/migrations/` in order (`20261118120000_init.sql`, then `20261120120000_investing.sql`). They're idempotent.
 4. **Authentication → URL Configuration:** Site URL = the app's origin (`http://localhost:3000`
    locally, the Vercel URL in production); add `<origin>/**` to Redirect URLs. Email links
    (confirmation, password reset) land on `/auth/confirm`.
@@ -23,6 +23,8 @@ the signed-in user's rows. The same model works for the web app and the Capacito
 | `expenses` | RLS: own rows (select/insert/update/delete) | PK `(user_id, id)`; `id` stays client-generated; `amount numeric(12,2) > 0`; category check; `source jsonb` for imports with a unique `(user_id, source->>'externalId')` index; in the `supabase_realtime` publication |
 | `user_settings` | RLS: own row | `daily_budget` |
 | `bank_connections` | RLS on, **no policies**: server secret key only | encrypted aggregator tokens, sync cursor |
+| `holdings` | RLS: own rows | symbol, shares, optional total `cost_basis`, `account`; from `20261120120000_investing.sql` |
+| `watchlist` | RLS: own rows (select/insert/delete) | PK `(user_id, symbol)` |
 
 All tables cascade-delete with `auth.users`, so deleting an account deletes its data.
 Schema changes go in new migration files; never edit an applied one. Bump `BACKUP_VERSION`
